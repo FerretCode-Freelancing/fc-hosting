@@ -15,8 +15,13 @@ function readSecret(path) {
   return Buffer.from(fs.readFileSync(path, "utf8"), "base64").toString("utf8");
 }
 
+function catchError(err, res) {
+  console.log(err);
+  res.send(500, "Internal server error. Please try again later.");
+}
+
 const app = express();
-app.set('trust proxy', 1);
+app.set("trust proxy", 1);
 app.use(
   require("express-session")({
     secret: readSecret("./config/session/SESSION"),
@@ -30,7 +35,7 @@ app.get("/auth/github", (req, res) => {
   res.redirect(
     `https://github.com/login/oauth/authorize?client_id=${readSecret(
       "./config/gh/id"
-    )}&scope=public_repo,`
+    )}&scope=public_repo,read:user`
   );
 });
 
@@ -47,18 +52,36 @@ app.get("/auth/github/callback", async (req, res) => {
         Accept: "application/json",
       },
     }
-  ).catch(err => {
-    console.log(err);
-    res.send(500, "Error authenticating")
-  });
+  ).catch((err) => catchError(err, res));
 
-  const json = await response.json();
-  
-  if(!json.access_code) {
+  const loginJson = await response.json();
+
+  if (!loginJson.access_code) {
     res.send(403, "Unauthorized");
-    req.session.access_token = null;
+    req.session.access_code = null;
   }
-  
+
+  req.session.access_code = loginJson.access_code;
+
+  const user = await fetch("https://api.github.com/user", {
+    headers: {
+      Accept: "application/json",
+      Authorization: `token ${loginJson.access_code}`,
+    },
+  }).catch((err) => catchError(err, res));
+
+  const userJson = await user.json();
+
+  firebase
+    .findOrCreateDoc({
+      projects: [],
+      runningProjects: [],
+    }, `users/${userJson.id}`)
+    .then((data) => {
+      //TODO: send webhook
+    })
+    .catch((err) => catchError(err, res));
+
   res.send(200, "Authenticated");
 });
 
