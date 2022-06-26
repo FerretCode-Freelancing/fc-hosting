@@ -3,8 +3,6 @@ const { MyCatLikesFirebaseServer } = require("my-cat-likes-firebase");
 const express = require("express");
 const jwt = require("jsonwebtoken");
 //const bcrypt = require("bcrypt");
-const passport = require("passport");
-const GithubStrategy = require("passport-github2");
 const fs = require("fs");
 
 const firebase = new MyCatLikesFirebaseServer({
@@ -14,43 +12,8 @@ const firebase = new MyCatLikesFirebaseServer({
 firebase.initialize();
 
 function readSecret(path) {
-  return Buffer.from(
-    fs.readFileSync(path, "utf8"),
-    "base64"
-  ).toString("utf8")
+  return Buffer.from(fs.readFileSync(path, "utf8"), "base64").toString("utf8");
 }
-
-passport.use(
-  new GithubStrategy.Strategy(
-    {
-      clientId: readSecret("./config/gh/id"),
-      clientSecret: readSecret("./config/gh/secret"),
-      callbackURL: "http://127.0.0.1:3000/auth/github/callback",
-    },
-    (accessToken, refreshToken, profile, done) => {
-      firebase
-        .getDoc(`users/${profile.id}`)
-        .then((user) => {
-          if (!user)
-            firebase
-              .createDoc({}, `users/${profile.id}`)
-              .then(() => done(null, {}))
-              .catch((err) => done(err, null));
-
-          return done(null, user);
-        })
-        .catch((err) => done(err, null));
-    }
-  )
-);
-
-passport.serializeUser((user, done) => {
-  done(null, user);
-});
-
-passport.deserializeUser((user, done) => {
-  done(null, user);
-});
 
 const app = express();
 app.use(
@@ -61,14 +24,38 @@ app.use(
   })
 );
 
-app.get("/auth/github", passport.authenticate("github"));
+app.get("/auth/github", (req, res) => {
+  res.redirect(
+    `https://github.com/login/oauth/authorize?client_id=${readSecret(
+      "./config/gh/id"
+    )}`
+  );
+});
 
-app.get(
-  "/auth/github/callback",
-  passport.authenticate("github", { failureRedirect: "/auth/failure" }),
-  (req, res) => {
-    res.send(JSON.stringify(req.headers, null, 2));
-  }
-);
+app.get("/auth/github/callback", async (req, res) => {
+  const code = req.query.code;
+
+  const response = await fetch(
+    `https://github.com/login/oauth/access_token?client_id=${readSecret(
+      "./config/gh/id"
+    )}&client_secret=${readSecret("./config/gh/secret")}&code=${code}`,
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+      },
+    }
+  ).catch(err => {
+    console.log(err);
+    res.send(500, "Error authenticating")
+  });
+
+  const json = await response.json();
+  
+  if(!json.access_code)
+    res.send(403, "Unauthorized");
+  
+  res.send(200, "Authenticated");
+});
 
 app.listen(3000);
