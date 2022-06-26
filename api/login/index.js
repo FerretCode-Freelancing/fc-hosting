@@ -30,7 +30,7 @@ app.get("/auth/github", (req, res) => {
   res.redirect(
     `https://github.com/login/oauth/authorize?client_id=${readSecret(
       "./config/gh/id"
-    )}`
+    )}&scope=public_repo,`
   );
 });
 
