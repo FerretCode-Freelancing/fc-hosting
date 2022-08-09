@@ -2,7 +2,7 @@ const { MyCatLikesFirebaseServer } = require("my-cat-likes-firebase");
 
 const express = require("express");
 const jwt = require("jsonwebtoken");
-//const bcrypt = require("bcrypt");
+const bcrypt = require("bcrypt");
 const fs = require("fs");
 
 const firebase = new MyCatLikesFirebaseServer({
@@ -24,7 +24,7 @@ const app = express();
 app.set("trust proxy", 1);
 app.use(
   require("express-session")({
-    secret: readSecret("./config/session/SESSION"),
+    secret: readSecret("./config/session/secret"),
     resave: false,
     saveUninitialized: true,
     cookie: { secure: true },
@@ -35,7 +35,7 @@ app.get("/auth/github", (req, res) => {
   res.redirect(
     `https://github.com/login/oauth/authorize?client_id=${readSecret(
       "./config/gh/id"
-    )}&scope=public_repo,read:user`
+    )}&scope=public_repo,read:user,user`
   );
 });
 
@@ -71,12 +71,15 @@ app.get("/auth/github/callback", async (req, res) => {
   }).catch((err) => catchError(err, res));
 
   const userJson = await user.json();
+  
+  const salt = await bcrypt.genSalt(10).catch((err) => catchError(err, res)); 
+  const hash = await bcrypt.hash(userJson.email, salt).catch((err) => catchError(err, res));
 
   firebase
     .findOrCreateDoc({
       projects: [],
       runningProjects: [],
-    }, `users/${userJson.id}`)
+    }, `users/${hash}`)
     .then((data) => {
       //TODO: send webhook
     })

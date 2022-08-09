@@ -17,7 +17,7 @@ function question(question) {
 function parseData(data) {
   try {
     JSON.parse(data);
-    return "stringData: |"
+    return "stringData:"
   } catch(err) {
     return "data:"
   }
@@ -32,7 +32,7 @@ function parseData(data) {
     apiVersion: v1
     kind: Secret
     metadata:
-      - name: ${name} 
+      name: ${name} 
     type: Opaque
     ${parseData(data)}
       ${data}    

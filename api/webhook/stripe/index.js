@@ -31,12 +31,11 @@ module.exports.StripeWebhook = class {
       );
     } catch (err) {
       console.log("Webhook verification failed");
-      res.send(400, "Failed to verify webhook");
+      this.res.send(400, "Failed to verify webhook");
     }
     
     switch(eventType) {
       case "checkout.session.completed":
-        firebase.createOrUpdateDoc({})
       break;
       
       case "invoice.paid":

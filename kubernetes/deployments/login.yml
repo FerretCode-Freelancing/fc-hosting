@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fc-login
+  labels:
+    app: fc-login
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fc-login
+  template:
+    metadata:
+      labels:
+        app: fc-login
+    spec:
+      containers:
+        - name: fc-login
+          image: sthanguy/fc-login:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          volumeMounts:
+            - name: firebase-secret
+              mountPath: "/usr/route/config/firebase"
+              readOnly: true
+            - name: session-secret
+              mountPath: "usr/route/config/session"
+              readOnly: true
+            - name: gh
+              mountPath: "usr/route/config/gh"
+              readOnly: true
+      volumes:
+        - name: firebase-secret
+          secret:
+            secretName: firebase-secret
+        - name: session-secret
+          secret:
+            secretName: session-secret
+        - name: gh
+          secret:
+            secretName: gh
+            items:
+            - key: id
+              path: id
+            - key: secret
+              path: secret
