@@ -34,7 +34,7 @@ app.get("/auth/github", (_, res) => {
   res.redirect(
     `https://github.com/login/oauth/authorize?client_id=${readSecret(
       "./config/gh/id"
-    )}&scope=public_repo,read:user,user`
+    )}&scope=public_repo,read:user,user&redirect_uri=http://localhost:3000/auth/github/callback`
   );
 });
 
