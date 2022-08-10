@@ -9,7 +9,7 @@ const express = require("express");
 
 let app = express();
 
-app.post("/subscribe", async (req, res) => {
+app.post("/api/subscribe", async (req, res) => {
   const { price } = req.body;
 
   const session = await stripe.checkout.sessions.create({

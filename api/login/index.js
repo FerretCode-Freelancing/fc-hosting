@@ -9,7 +9,6 @@ const firebase = new MyCatLikesFirebaseServer({
   firebaseCredentialsPath: "./config/firebase/FIREBASE",
   loggingEnabled: true,
 });
-firebase.initialize();
 
 function readSecret(path) {
   return Buffer.from(fs.readFileSync(path, "utf8"), "base64").toString("utf8");
@@ -31,7 +30,7 @@ app.use(
   })
 );
 
-app.get("/auth/github", (req, res) => {
+app.get("/auth/github", (_, res) => {
   res.redirect(
     `https://github.com/login/oauth/authorize?client_id=${readSecret(
       "./config/gh/id"

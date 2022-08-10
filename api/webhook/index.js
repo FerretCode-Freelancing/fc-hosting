@@ -12,7 +12,7 @@ const firebase = new MyCatLikesFirebaseServer({
 });
 const app = express();
 
-app.post("/webhook", (req, res) => {
+app.post("/api/webhook", (req, res) => {
   if(req.headers["stripe-signature"])
     new StripeWebhook(req, res, firebase);
   else if(!req.headers.custom)

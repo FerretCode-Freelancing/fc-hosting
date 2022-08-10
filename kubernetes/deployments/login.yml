@@ -39,7 +39,7 @@ spec:
             secretName: session-secret
         - name: gh
           secret:
-            secretName: gh
+            secretName: github-login-secret
             items:
             - key: id
               path: id
