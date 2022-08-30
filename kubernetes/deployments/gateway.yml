@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: fc-router
+  name: fc-gateway
   labels:
-    app: fc-router
+    app: fc-gateway
 spec:
   replicas: 1
-  selector: 
+  selector:
     matchLabels:
-      app: fc-router
+      app: fc-gateway
   template:
     metadata:
       labels:
-        app: fc-router
+        app: fc-gateway
     spec:
       containers:
-        - name: fc-router
-          image: sthanguy/fc-router:latest
+        - name: fc-gateway
+          image: sthanguy/fc-gateway
           imagePullPolicy: Always
           ports:
             - containerPort: 3000

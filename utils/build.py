@@ -27,3 +27,14 @@ for dir in to_publish:
     publish_cmd = f'sudo docker push {image_name}'
 
     os.system(publish_cmd)
+
+print("RESTARTING")
+
+for dir in to_publish:
+    deployment_name = f'fc-{dir[7:]}'
+
+    os.system(f'kubectl rollout restart deployment {deployment_name}')
+
+print("PODS")
+
+os.system('kubectl get pods')

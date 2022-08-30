@@ -13,9 +13,7 @@ class Request {
     
     this.request = async (req, res) => {
       const { endpoint } = getEndpoint(req);
-      const query = url.parse(req.url, true).query; 
-      
-      console.log(req);
+      const query = url.parse(req.url, true).query;  
       
       if(!endpoint)
         return res.respond(404, "Endpoint not found.");
@@ -26,21 +24,17 @@ class Request {
         }${req.url}${Object.keys(query).length > 0 ? "?" : ""}${new URLSearchParams({
           ...query,
         }).toString()}`,
-        { body: req.body, method: req.method }
-      ).catch((err) => handleError(err, res)); 
+        { body: req.body, method: req.method, redirect: 'follow' }
+      ).catch((err) => handleError(err, res));  
+      
+      const json = await data.json();
+      
+      if(json.url)
+        return res.writeHead(302, {
+          'Location': json.url
+        }).end(); 
 
-      const clone = data.clone();
-      const text = await data.text();
-
-      if(text.charAt(0) !== "{") {
-        return res
-          .writeHead(data.status, {
-            "Content-Length": "text/html"
-          })
-          .end(text)
-      }
- 
-      res.respond(data.status, await clone.json());
+      res.respond(data.status, json);
     };
   }
 }

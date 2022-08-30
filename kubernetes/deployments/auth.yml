@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: fc-login
+  name: fc-auth
   labels:
-    app: fc-login
+    app: fc-auth
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: fc-login
+      app: fc-auth
   template:
     metadata:
       labels:
-        app: fc-login
+        app: fc-auth
     spec:
       containers:
-        - name: fc-login
-          image: sthanguy/fc-login:latest
+        - name: fc-auth
+          image: sthanguy/fc-auth:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
@@ -39,7 +39,7 @@ spec:
             secretName: session-secret
         - name: gh
           secret:
-            secretName: github-login-secret
+            secretName: github-auth-secret
             items:
             - key: id
               path: id
