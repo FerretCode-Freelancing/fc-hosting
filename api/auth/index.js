@@ -92,12 +92,6 @@ app.get("/auth/github/callback", async (req, res) => {
       email: hash
     }, `users/${userJson.id}`)
     .then(async () => {
-      /*await fetch("http://localhost:3001/webhook", {
-        headers: { custom: true },
-        body: { content: "A user has logged in." },
-        method: "POST"
-      })
-      .catch((err) => console.error(err));*/
     })
     .catch((err) => catchError(err, res));
 

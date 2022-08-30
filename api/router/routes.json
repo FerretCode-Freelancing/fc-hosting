@@ -1,6 +1,0 @@
-{
-  "routes": {
-    "auth": "LOGIN",
-    "api": ["WEBHOOK", "SUBSCRIBE"]
-  }
-}
