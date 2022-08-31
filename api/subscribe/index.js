@@ -1,9 +1,6 @@
 const fs = require("fs");
 const stripe = require("stripe")(
-  Buffer.from(
-    fs.readFileSync("./config/stripe/key", "utf8"),
-    "base64"
-  ).toString("utf8")
+  fs.readFileSync("./config/stripe/key", "utf8").replace(/(\r\n|\n|\r)/gm, "")
 );
 const express = require("express");
 
@@ -30,8 +27,8 @@ app.get("/api/subscribe/validate", async (req, res) => {
     (a, b) => a.created - b.created
   );
   sorted = sorted.filter((sub) => sub.status === "active")
-  
-  if(!sorted.length)
+
+  if (!sorted.length)
     return res.status(200).send({ active: false })
 
   res.status(200).send({ active: true });
@@ -50,9 +47,7 @@ app.get("/api/subscribe/new/:price", async (req, res) => {
 
   const stripePrice = prices.data.find((p) => {
     return p.unit_amount === price * 100 ? true : false;
-  });
-
-  console.log(stripePrice);
+  }); 
 
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
