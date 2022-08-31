@@ -26,6 +26,19 @@ func main() {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 
+	file, err := os.Open("./config/custom/secret")
+
+	if err != nil {
+		fmt.Println("Couldn't start logger")
+		os.Exit(1)
+	}
+
+	scanner := bufio.NewScanner(file)
+	scanner.Split(bufio.ScanLines)
+	scanner.Scan()
+
+	webhook := scanner.Text()
+
 	r.Post("/", func(w http.ResponseWriter, r *http.Request) {
 		request := Request{}
 
@@ -38,15 +51,6 @@ func main() {
 		}
 
 		if request.Webhook == true {
-			file, err := os.Open("./config/custom/secret")
-			sendError(err, w)
-
-			scanner := bufio.NewScanner(file)
-			scanner.Split(bufio.ScanLines)
-			scanner.Scan()
-
-			webhook := scanner.Text()
-
 			request.Message = fmt.Sprintf(
 				"%s - %s",
 				time.Now().Local().String(),

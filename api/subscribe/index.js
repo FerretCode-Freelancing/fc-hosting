@@ -58,8 +58,8 @@ app.get("/api/subscribe/new/:price", async (req, res) => {
       },
     ],
     success_url:
-      "http://127.0.0.1:3001/api/subscribe/success?session_id={CHECKOUT_SESSION_ID}",
-    cancel_url: "http://127.0.0.1:3001/frontend/canceled",
+      "http://localhost:3001/api/subscribe/success?session_id={CHECKOUT_SESSION_ID}",
+    cancel_url: "http://localhost:3001/frontend/canceled",
   });
 
   res.redirect(session.url);

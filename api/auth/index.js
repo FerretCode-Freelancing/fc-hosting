@@ -25,19 +25,23 @@ function catchError(err, res) {
 
 const app = express();
 app.set("trust proxy", 1);
+/*app.use(
+  require("cookie-parser")
+)*/
 app.use(
   require("express-session")({
+    name: "fc-hosting",
     secret: readSecret("./config/session/secret"),
     resave: false,
-    saveUninitialized: true,
-    cookie: { secure: true },
+    saveUninitialized: false,
+    cookie: { secure: false }, //TODO: set to true when https is enabled
   })
 );
 
 app.get("/auth/github", (_, res) => {
   const url = `https://github.com/login/oauth/authorize?client_id=${readSecret(
       "./config/gh/id"
-    )}&scope=public_repo,read:user,user:email&redirect_uri=http://127.0.0.1:3001/auth/github/callback`  
+    )}&scope=public_repo,read:user,user:email&redirect_uri=http://localhost:3001/auth/github/callback`  
 
   res.redirect(url);
 });
@@ -65,6 +69,8 @@ app.get("/auth/github/callback", async (req, res) => {
   }
    
   req.session.access_token = loginJson.access_token; 
+  
+  req.session.save()
 
   const user = await fetch("https://api.github.com/user", {
     headers: {
