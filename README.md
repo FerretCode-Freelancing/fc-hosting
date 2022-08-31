@@ -14,7 +14,7 @@ FerretCode Hosting is for people who want to host small applications or projects
 - <500kb size: $1/month
 - <1mb size: $2/month
 - <5mb size: $5/month
-- Sizes >5mb are currently not accepted.
+- For project sizes >5mb please contact me for custom pricing.
 
 ## Support 📧
 - Join the [Discord](https://discord.gg/NnM5QrBTux) and go to #hosting-support
