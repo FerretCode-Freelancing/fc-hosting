@@ -30,6 +30,15 @@ spec:
             - name: gh
               mountPath: "usr/route/config/gh"
               readOnly: true
+        - name: fc-logging
+          image: sthanguy/fc-logging:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5000
+          volumeMounts:
+            - name: custom-webhook-secret
+              mountPath: "/usr/logger/config/custom/"
+              readOnly: true
       volumes:
         - name: firebase-secret
           secret:
@@ -43,5 +52,11 @@ spec:
             items:
             - key: id
               path: id
+            - key: secret
+              path: secret
+        - name: custom-webhook-secret
+          secret:
+            secretName: custom-webhook-secret
+            items:
             - key: secret
               path: secret

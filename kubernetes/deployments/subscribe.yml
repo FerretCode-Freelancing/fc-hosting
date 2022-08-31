@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fc-subscribe
+  labels:
+    app: fc-subscribe
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fc-subscribe
+  template:
+    metadata:
+      labels:
+        app: fc-subscribe
+    spec:
+      containers:
+        - name: fc-subscribe
+          image: sthanguy/fc-subscribe:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          volumeMounts:
+            - name: stripe-auth-secret
+              mountPath: "/usr/route/config/stripe"
+              readOnly: true
+        - name: fc-logging
+          image: sthanguy/fc-logging:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5000
+          volumeMounts:
+            - name: custom-webhook-secret
+              mountPath: "/usr/logger/config/custom/"
+              readOnly: true
+      volumes:
+        - name: custom-webhook-secret
+          secret:
+            secretName: custom-webhook-secret
+            items:
+            - key: secret
+              path: secret
+        - name: stripe-auth-secret
+          secret:
+            secretName: stripe-auth-secret
+            items:
+            - key: key
+              path: key

@@ -1,11 +1,8 @@
 package main
 
 import (
-	//"bytes"
-	//"encoding/json"
 	"errors"
 	"fmt"
-	//"io"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -80,9 +77,6 @@ func ReverseProxy(address *url.URL) *httputil.ReverseProxy {
 		request.URL.Scheme = address.Scheme
 		request.URL.Host = address.Host
 		request.URL.Path = address.Path
-
-		fmt.Println(request.Method)
-		fmt.Println(request.Body)
 	}
 
 	return p

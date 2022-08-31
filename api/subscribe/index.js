@@ -1,7 +1,7 @@
 const fs = require("fs");
 const stripe = require("stripe")(
   Buffer.from(
-    fs.readFileSync("./config/stripe/KEY", "utf8"),
+    fs.readFileSync("./config/stripe/key", "utf8"),
     "base64"
   ).toString("utf8")
 );
@@ -9,22 +9,65 @@ const express = require("express");
 
 let app = express();
 
-app.post("/api/subscribe", async (req, res) => {
-  const { price } = req.body;
+app.get("/api/subscribe/success", async (req, res) => {
+  const sessionId = req.query.session_id;
+
+  const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+  if (session) {
+    res.redirect("http://localhost:3001/frontend/success");
+  } else return res.status(403).send("Invalid checkout session");
+});
+
+app.get("/api/subscribe/validate", async (req, res) => {
+  const customerId = req.query.customer_id;
+
+  const subscriptions = await stripe.customers.retrieve(customerId, {
+    expand: ["subscriptions"],
+  });
+
+  let sorted = subscriptions.subscriptions.data.sort(
+    (a, b) => a.created - b.created
+  );
+  sorted = sorted.filter((sub) => sub.status === "active")
+  
+  if(!sorted.length)
+    return res.status(200).send({ active: false })
+
+  res.status(200).send({ active: true });
+});
+
+app.get("/api/subscribe/new/:price", async (req, res) => {
+  const { price } = req.params;
+
+  const product = await stripe.products.search({
+    query: 'name~"FerretCode Hosting"',
+  });
+
+  const prices = await stripe.prices.list({
+    product: product.data[0].id,
+  });
+
+  const stripePrice = prices.data.find((p) => {
+    return p.unit_amount === price * 100 ? true : false;
+  });
+
+  console.log(stripePrice);
 
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
     line_items: [
       {
-        price,
+        price: stripePrice.id,
         quantity: 1,
       },
     ],
-    success_url: "http://127.0.0.1:3000/success?session_id={CHECKOUT_SESSION_ID}",
-    cancel_url: "http://127.0.0.1:3000/canceled"
+    success_url:
+      "http://127.0.0.1:3001/api/subscribe/success?session_id={CHECKOUT_SESSION_ID}",
+    cancel_url: "http://127.0.0.1:3001/frontend/canceled",
   });
-  
-  res.redirect(303, session.url);
+
+  res.redirect(session.url);
 });
 
 app.listen(3000);

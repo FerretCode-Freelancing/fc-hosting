@@ -16,6 +16,10 @@ function readSecret(path) {
 
 function catchError(err, res) {
   console.log(err);
+  
+  if(res.headersSent)
+    return;
+  
   return res.status(500).send("Internal server error. Please try again later.");
 }
 
@@ -92,6 +96,17 @@ app.get("/auth/github/callback", async (req, res) => {
       email: hash
     }, `users/${userJson.id}`)
     .then(async () => {
+      const response = await fetch('http://localhost:5000/', {
+        method: "POST",
+        body: JSON.stringify({ "message": `User ${userJson.id} has logged in`, "webhook": true }),
+        headers: {
+          "Content-Type": "application/json"
+        }
+      }).catch((err) => catchError(err, res));
+    
+      const json = await response.text();
+    
+      console.log(json);
     })
     .catch((err) => catchError(err, res));
 
