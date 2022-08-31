@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: fc-session-storage
+  labels:
+    run: fc-session-storage
+spec:
+  ports:
+    - port: 6379
+      protocol: TCP
+  selector:
+    app: fc-session-storage

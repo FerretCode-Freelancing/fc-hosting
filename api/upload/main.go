@@ -9,7 +9,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/gorilla/sessions"
 )
 
 func main() {
@@ -32,22 +31,16 @@ func main() {
 	scanner.Split(bufio.ScanLines)
 	scanner.Scan()
 
-	secret := scanner.Text()
+	// secret := scanner.Text()
 
 	r.Get("/api/upload", func(w http.ResponseWriter, r *http.Request) {
-		store := sessions.NewCookieStore([]byte(secret))
-
-		session, _ := store.Get(r, "fc-hosting")
-
-		fmt.Println(session.IsNew)
-
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 
+			fmt.Println("error fetching cookie")
+
 			return
 		}
-
-		fmt.Println(session.Values)
 
 		w.Write([]byte("hi"))
 	})

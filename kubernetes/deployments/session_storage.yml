@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fc-session-storage
+  labels:
+    app: fc-session-storage
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fc-session-storage
+  template:
+    metadata:
+      labels:
+        app: fc-session-storage
+    spec:
+      containers: 
+        - name: fc-session-storage
+          image: redis
+          imagePullPolicy: Always
+          args: ["--requirepass", "$(REDIS_PASS)"]
+          ports:
+            - containerPort: 6379
+          env:
+            - name: REDIS_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: redis-secret 
+                  key: redis-pass
+                  optional: false

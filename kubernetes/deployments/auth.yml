@@ -25,11 +25,13 @@ spec:
               mountPath: "/usr/route/config/firebase"
               readOnly: true
             - name: session-secret
-              mountPath: "usr/route/config/session"
+              mountPath: "/usr/route/config/session"
               readOnly: true
             - name: gh
-              mountPath: "usr/route/config/gh"
+              mountPath: "/usr/route/config/gh"
               readOnly: true
+            - name: redis-secret
+              mountPath: "/usr/route/config/redis"
         - name: fc-logging
           image: sthanguy/fc-logging:latest
           imagePullPolicy: Always
@@ -60,3 +62,9 @@ spec:
             items:
             - key: secret
               path: secret
+        - name: redis-secret
+          secret:
+            secretName: redis-secret
+            items:
+            - key: redis-pass
+              path: redis-pass
