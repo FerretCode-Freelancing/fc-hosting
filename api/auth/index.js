@@ -10,7 +10,7 @@ const { createClient } = require("redis");
 
 const redisClient = createClient({
   legacyMode: true,
-  url: `redis://default:${readSecret("./config/redis/redis-pass")}${process.env.FC_SESSION_STORAGE_SERVICE_HOST}:${process.env.FC_SESSION_STORAGE_SERVICE_PORT}`,
+  url: `redis://${process.env.FC_SESSION_STORAGE_SERVICE_HOST}:${process.env.FC_SESSION_STORAGE_SERVICE_PORT}`,
 })
 redisClient.connect().catch(console.error)
 
@@ -43,6 +43,36 @@ app.use(
     cookie: { secure: false }, //TODO: set to true when https is enabled
   })
 );
+
+const sessionString = {
+	start: 4,
+	end: 36,
+	prefix: "sess:"
+}; 
+
+app.get("/auth/github/user", async (req, res) => {
+	const id = req.session.id;
+
+	const sess = await redisClient.hGet(`${sessionString.prefix}${
+		id.slice(sessionString.start, sessionString.end)
+	}`).catch((err) => res.status(500).send(err));
+
+	if(sess && !res.headersSent)
+		return res.status(403).send("Failed to validate auth.");
+
+	const token = req.session.access_token;	
+
+	const user = await fetch("https://api.github.com/user", {
+		headers: {
+			Accept: "application/json",
+			Authorization: `token ${token}`,
+		},
+	}).catch((err) => catchError(err, res));
+
+	const userJson = await user.json();
+
+	res.status(200).send({ id: userJson.id });
+});
 
 app.get("/auth/github", (_, res) => {
   const url = `https://github.com/login/oauth/authorize?client_id=${readSecret(
@@ -103,6 +133,9 @@ app.get("/auth/github/callback", async (req, res) => {
   const hash = await bcrypt
     .hash(emailJson.find((e) => e.primary === true).email, salt)
     .catch((err) => catchError(err, res));
+
+  firebase.findOrCreateDoc()
+    .then(() => { });
 
   firebase
     .findOrCreateDoc(
