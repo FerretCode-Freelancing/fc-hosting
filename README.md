@@ -6,9 +6,10 @@ FerretCode Hosting is for people who want to host small applications or projects
 
 ## How it works 📝
 1. Upload a schema file that points to a GitHub Repository (public only for now)
-2. Make a name for your app
-3. Wait for deployment
-4. And you're done!
+2. Paste your environment variables
+3. Make a name for your app
+4. Wait for deployment
+5. And you're done!
 
 ## Pricing 💵
 - <500kb size: $1/month
