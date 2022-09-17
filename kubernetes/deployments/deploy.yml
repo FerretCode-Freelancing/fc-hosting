@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fc-deploy
+  labels:
+    app: fc-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fc-deploy
+  template:
+    metadata:
+      labels:
+        app: fc-deploy
+    spec:
+      containers:
+        - name: fc-deploy
+          image: sthanguy/fc-deploy:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          volumeMounts:
+            - name: session-secret
+              mountPath: "/usr/route/config/session"
+        - name: fc-logging
+          image: sthanguy/fc-logging:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5000
+          volumeMounts:
+            - name: custom-webhook-secret
+              mountPath: "/usr/logger/config/custom/"
+              readOnly: true
+      volumes:
+        - name: custom-webhook-secret
+          secret:
+            secretName: custom-webhook-secret
+            items:
+            - key: secret
+              path: secret
+        - name: session-secret
+          secret:
+            secretName: session-secret
+            items:
+            - key: secret
+ 
