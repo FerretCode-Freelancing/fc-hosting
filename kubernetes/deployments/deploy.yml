@@ -44,4 +44,5 @@ spec:
             secretName: session-secret
             items:
             - key: secret
+              path: secret
  
