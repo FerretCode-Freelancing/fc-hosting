@@ -26,7 +26,7 @@ func main() {
 	r.Use(httprate.LimitByIP(50, 1*time.Minute))
 
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("hello world"))
+		w.Write([]byte("hi"))
 	})
 
 	r.Post("/*", func(w http.ResponseWriter, r *http.Request) {
