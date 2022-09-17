@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fc-deploy-cache
+  labels:
+    app: fc-deploy-cache
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fc-deploy-cache
+  template:
+    metadata:
+      labels:
+        app: fc-deploy-cache
+    spec:
+      containers: 
+        - name: fc-deploy-cache
+          image: redis
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 6379
