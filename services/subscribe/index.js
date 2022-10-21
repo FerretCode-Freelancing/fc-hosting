@@ -46,7 +46,7 @@ app.get("/api/subscribe/new/:price", async (req, res) => {
   });
 
   const stripePrice = prices.data.find((p) => {
-    return p.unit_amount === price * 100 ? true : false;
+    return p.unit_amount === price * 100; 
   }); 
 
   const session = await stripe.checkout.sessions.create({
