@@ -11,11 +11,10 @@
   "license": "ISC",
   "dependencies": {
     "bcrypt": "^5.0.1",
-    "connect-redis": "^6.1.3",
+    "connect-fc-session-cache": "^1.0.2",
     "cookie-parser": "^1.4.6",
     "express": "^4.18.1",
     "express-session": "^1.17.3",
-    "my-cat-likes-firebase": "^1.2.2",
-    "redis": "^4.3.0"
+    "my-cat-likes-firebase": "^1.2.2"
   }
 }

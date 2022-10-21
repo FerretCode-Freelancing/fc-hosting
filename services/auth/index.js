@@ -5,14 +5,9 @@ const session = require("express-session");
 const bcrypt = require("bcrypt");
 const fs = require("fs");
 
-const RedisStore = require("connect-redis")(session);
-const { createClient } = require("redis");
+const CacheStore = require("connect-fc-session-cache")(session);
 
-const redisClient = createClient({
-  legacyMode: true,
-  url: `redis://${process.env.FC_SESSION_STORAGE_SERVICE_HOST}:${process.env.FC_SESSION_STORAGE_SERVICE_PORT}`,
-})
-redisClient.connect().catch(console.error)
+const store = new CacheStore({ url: `http://${process.env.FC_SESSION_CACHE_SERVICE_HOST}:${process.env.FC_SESSION_CACHE_SERVICE_PORT}` });
 
 const firebase = new MyCatLikesFirebaseServer({
   firebaseCredentialsPath: "./config/firebase/FIREBASE",
@@ -38,17 +33,11 @@ app.use(
     name: "fc-hosting",
     secret: readSecret("./config/session/secret"),
     resave: false,
-    store: new RedisStore({ client: redisClient }),
+    store, 
     saveUninitialized: false,
     cookie: { secure: false }, //TODO: set to true when https is enabled
   })
 );
-
-const sessionString = {
-	start: 4,
-	end: 36,
-	prefix: "sess:"
-}; 
 
 app.get("/auth/github/user", async (req, res) => {
 	const id = req.session.id;
@@ -57,7 +46,7 @@ app.get("/auth/github/user", async (req, res) => {
 		id.slice(sessionString.start, sessionString.end)
 	}`).catch((err) => res.status(500).send(err));
 
-	if(sess && !res.headersSent)
+	if(!sess && !res.headersSent)
 		return res.status(403).send("Failed to validate auth.");
 
 	const token = req.session.access_token;	
