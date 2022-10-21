@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "connect-fc-session-cache": "^1.0.3"
+  }
+}

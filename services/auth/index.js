@@ -42,25 +42,23 @@ app.use(
 app.get("/auth/github/user", async (req, res) => {
 	const id = req.session.id;
 
-	const sess = await redisClient.hGet(`${sessionString.prefix}${
-		id.slice(sessionString.start, sessionString.end)
-	}`).catch((err) => res.status(500).send(err));
+  store.get(id, async (session, err) => {
+    if (err !== null && !res.headersSent)
+      return res.status(403).send("Failed to validate auth.");
 
-	if(!sess && !res.headersSent)
-		return res.status(403).send("Failed to validate auth.");
+    const token = session.access_token;
 
-	const token = req.session.access_token;	
+    const user = await fetch("https://api.github.com/user", {
+      headers: {
+        Accept: "application/json",
+        Authorization: `token ${token}`,
+      },
+    }).catch((err) => catchError(err, res))
+    
+    const userJson = user.json();
 
-	const user = await fetch("https://api.github.com/user", {
-		headers: {
-			Accept: "application/json",
-			Authorization: `token ${token}`,
-		},
-	}).catch((err) => catchError(err, res));
-
-	const userJson = await user.json();
-
-	res.status(200).send({ id: userJson.id });
+    res.status(200).send({ id: userJson.id })
+  });
 });
 
 app.get("/auth/github", (_, res) => {
