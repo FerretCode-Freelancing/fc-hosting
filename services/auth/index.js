@@ -7,7 +7,7 @@ const fs = require("fs");
 
 const CacheStore = require("connect-fc-session-cache")(session);
 
-const store = new CacheStore({ url: `http://${process.env.FC_SESSION_CACHE_SERVICE_HOST}:${process.env.FC_SESSION_CACHE_SERVICE_PORT}` });
+const store = new CacheStore({ url: `http://${readSecret("./config/cache/username")}:${readSecret("./config/cache/password")}@${process.env.FC_SESSION_CACHE_SERVICE_HOST}:${process.env.FC_SESSION_CACHE_SERVICE_PORT}` });
 
 const firebase = new MyCatLikesFirebaseServer({
   firebaseCredentialsPath: "./config/firebase/FIREBASE",

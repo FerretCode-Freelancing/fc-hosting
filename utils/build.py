@@ -29,7 +29,7 @@ for dir in to_publish:
 
 # restart
 for dir in to_publish:
-    cmd = f'kubectl rollout restart deployment fc-{dir[12:]}'
+    cmd = f'sudo kubectl rollout restart deployment fc-{dir[12:]}'
     os.system(cmd)
 
-os.system("kubectl get pods")
+os.system("sudo kubectl get pods")

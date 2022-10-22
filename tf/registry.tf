@@ -11,11 +11,11 @@ provider "kubernetes" {
 	config_path = "/root/.k3d/kubeconfig-fc-hosting.yaml"
 }
 
-resource "kubernetes_deployment" "default" {
+resource "kubernetes_deployment" "fc-registry" {
 	metadata {
-		name = "registry"
+		name = "fc-registry"
 		labels = {
-      app = "registry"			
+      app = "fc-registry"			
 		}
 	}
 
@@ -24,21 +24,21 @@ resource "kubernetes_deployment" "default" {
 
     selector {
       match_labels = {
-        app = "registry"
+        app = "fc-registry"
       }
     }
 
     template {
       metadata {
         labels = {
-          app = "registry"
+          app = "fc-registry"
         }
       }
 
       spec {
         container {
           image = "registry:2"
-          name = "registry"
+          name = "fc-registry"
           port {
             container_port = 5000
           }
@@ -60,9 +60,9 @@ resource "kubernetes_deployment" "default" {
           }
 
           volume_mount {
-            name = "registry"
-            mount_path = "/var/lib/registry"
-            sub_path = "registry"
+            name = "fc-registry"
+            mount_path = "/var/lib/fc-registry"
+            sub_path = "fc-registry"
           }
         } 
 
@@ -74,7 +74,7 @@ resource "kubernetes_deployment" "default" {
         }
 
         volume {
-          name = "registry"
+          name = "fc-registry"
           persistent_volume_claim {
             claim_name = "registry-pvc"
           }
@@ -84,14 +84,14 @@ resource "kubernetes_deployment" "default" {
   }
 }
 
-resource "kubernetes_service" "default" {
+resource "kubernetes_service" "fc-registry" {
   metadata {
-    name = "registry"
+    name = "fc-registry"
   }
 
   spec {
     selector = {
-      app = "registry"
+      app = "fc-registry"
     }
     type = "LoadBalancer"
     port {
@@ -102,7 +102,7 @@ resource "kubernetes_service" "default" {
   }
 }
 
-resource "kubernetes_persistent_volume_claim" "default" {
+resource "kubernetes_persistent_volume_claim" "fc-registry" {
   metadata {
     name = "registry-pvc"
   }
