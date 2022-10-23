@@ -33,14 +33,15 @@ spec:
             - name: session-cache-secret
               mountPath: "/usr/route/config/cache"
               readOnly: true
-            - name: custom-webhook-secret
-              mountPath: "/usr/logger/config/custom/"
-              readOnly: true
         - name: fc-logging
           image: sthanguy/fc-logging:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 5000
+          volumeMounts:
+            - name: custom-webhook-secret
+              mountPath: "/usr/logger/config/custom/"
+              readOnly: true
       volumes:
         - name: firebase-secret
           secret:

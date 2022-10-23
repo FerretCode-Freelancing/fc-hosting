@@ -7,7 +7,13 @@ const fs = require("fs");
 
 const CacheStore = require("connect-fc-session-cache")(session);
 
-const store = new CacheStore({ url: `http://${readSecret("./config/cache/username")}:${readSecret("./config/cache/password")}@${process.env.FC_SESSION_CACHE_SERVICE_HOST}:${process.env.FC_SESSION_CACHE_SERVICE_PORT}` });
+const store = new CacheStore({
+  url: `http://${readSecret("./config/cache/username")}:${readSecret(
+    "./config/cache/password"
+  )}@${process.env.FC_SESSION_CACHE_SERVICE_HOST}:${
+    process.env.FC_SESSION_CACHE_SERVICE_PORT
+  }`,
+});
 
 const firebase = new MyCatLikesFirebaseServer({
   firebaseCredentialsPath: "./config/firebase/FIREBASE",
@@ -32,15 +38,15 @@ app.use(
   session({
     name: "fc-hosting",
     secret: readSecret("./config/session/secret"),
-    resave: false,
-    store, 
+    resave: true,
+    store,
     saveUninitialized: false,
     cookie: { secure: false }, //TODO: set to true when https is enabled
   })
 );
 
 app.get("/auth/github/user", async (req, res) => {
-	const id = req.session.id;
+  const id = req.session.id;
 
   store.get(id, async (session, err) => {
     if (err !== null && !res.headersSent)
@@ -53,11 +59,11 @@ app.get("/auth/github/user", async (req, res) => {
         Accept: "application/json",
         Authorization: `token ${token}`,
       },
-    }).catch((err) => catchError(err, res))
-    
+    }).catch((err) => catchError(err, res));
+
     const userJson = user.json();
 
-    res.status(200).send({ id: userJson.id })
+    res.status(200).send({ id: userJson.id });
   });
 });
 
@@ -88,11 +94,9 @@ app.get("/auth/github/callback", async (req, res) => {
 
   if (!loginJson.access_token) {
     req.session.access_token = null;
-    return res
-      .status(403)
-      .send({
-        error: "There was an issue authenticating you! Please try again later.",
-      });
+    return res.status(403).send({
+      error: "There was an issue authenticating you! Please try again later.",
+    });
   }
 
   req.session.access_token = loginJson.access_token;
