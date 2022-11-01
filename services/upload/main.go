@@ -1,8 +1,8 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -11,25 +11,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-redis/redis/v8"
 )
 
-// This struct provides information on how to cut session ID strings
-// to check with Redis
-// As of now the defaults are
-/*
-	Start: 4
-	End: 36
-	Prefix: sess:
-*/
-type SessionString struct {
-	Start  int
-	End    int
-	Prefix string
-}
-
 type User struct {
-	UUID string `json:"id"`	
+	UUID string `json:"id"`
 }
 
 type Env struct {
@@ -65,7 +50,7 @@ func main() {
 		authenticated := CheckSession(w, r)
 
 		if authenticated != true {
-			http.Redirect(w, r, "http://localhost:3001/auth/github", http.StatusFound)
+			http.Error(w, errors.New("You are not authenticated!").Error(), http.StatusForbidden)
 
 			return
 		}
@@ -74,7 +59,7 @@ func main() {
 			http.Error(w, "The body cannot be empty!", http.StatusBadRequest)
 
 			return
-		} 
+		}
 
 		resp, err := http.Get("http://localhost:3001/auth/github/user")
 
@@ -114,7 +99,7 @@ func main() {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 
 			return
-		} 
+		}
 
 		//TODO: write internal service for creating deployments
 	})
@@ -123,46 +108,35 @@ func main() {
 }
 
 func CheckSession(w http.ResponseWriter, r *http.Request) bool {
-	session := SessionString{
-		Start:  4,
-		End:    36,
-		Prefix: "sess:",
-	}
-
-	ctx := context.Background()
-
-	rdb := redis.NewClient(&redis.Options{
-		Addr: fmt.Sprintf("%s:%s", os.Getenv("FC_SESSION_STORAGE_SERVICE_HOST"), os.Getenv("FC_SESSION_STORAGE_SERVICE_PORT")),
-	})
+	cache := fmt.Sprintf("%s:%s", os.Getenv("FC_SESSION_SESSION_CACHE_HOST"), os.Getenv("FC_SESSION_CACHE_SERVICE_PORT"))
 
 	cookie, err := r.Cookie("fc-hosting")
-	sendError(w, err)
 
-	_, redisNotFound := rdb.Get(
-		ctx,
-		fmt.Sprintf("%s%s", session.Prefix, cookie.Value[session.Start:session.End]),
-	).Result()
-
-	if redisNotFound != nil {
-		http.Redirect(
-			w,
-			r,
-			"http://localhost:3001/auth/github",
-			http.StatusForbidden,
-		)
-
+	if err != nil {
 		return false
 	}
 
-	return true
-}
+	client := &http.Client{}
 
-func sendError(w http.ResponseWriter, err error) {
+	req, err := http.NewRequest(
+		"GET",
+		fmt.Sprintf("%s?sid=%s", cache, cookie.Value),
+		nil,
+	)
+
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-
-		return
+		return false
 	}
 
-	return
+	res, err := client.Do(req)
+
+	if err != nil {
+		return false
+	}
+
+	if res.StatusCode == 200 {
+		return true
+	}
+
+	return false
 }
