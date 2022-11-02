@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -89,11 +91,11 @@ func main() {
 		} 
 
 		builder := fmt.Sprintf(
-			"%s:%s@%s:%s",
-			os.Getenv("FC_SESSION_CACHE_USERNAME"),
-			os.Getenv("FC_SESSION_CACHE_PASSWORD"),
-			os.Getenv("FC_SESSION_CACHE_SERVICE_HOST"),
-			os.Getenv("FC_SESSION_CACHE_SERVICE_PORT"),
+			"http://%s:%s@%s:%s",
+			strings.Trim(os.Getenv("FC_BUILDER_CACHE_USERNAME"), "\n"),
+			strings.Trim(os.Getenv("FC_BUILDER_CACHE_PASSWORD"), "\n"),
+			os.Getenv("FC_BUILDER_SERVICE_HOST"),
+			os.Getenv("FC_BUILDER_SERVICE_PORT"),
 		)
 
 		client := &http.Client{}
@@ -144,9 +146,9 @@ func main() {
 
 func CheckSession(w http.ResponseWriter, r *http.Request) bool {
 	cache := fmt.Sprintf(
-		"%s:%s@%s:%s", 
-		os.Getenv("FC_SESSION_CACHE_USERNAME"),
-		os.Getenv("FC_SESSION_CACHE_PASSWORD"),
+		"http://%s:%s@%s:%s", 
+		strings.Trim(os.Getenv("FC_SESSION_CACHE_USERNAME"), "\n"),
+		strings.Trim(os.Getenv("FC_SESSION_CACHE_PASSWORD"), "\n"),
 		os.Getenv("FC_SESSION_CACHE_SERVICE_HOST"), 
 		os.Getenv("FC_SESSION_CACHE_SERVICE_PORT"),
 	)
@@ -163,7 +165,7 @@ func CheckSession(w http.ResponseWriter, r *http.Request) bool {
 
 	req, err := http.NewRequest(
 		"GET",
-		fmt.Sprintf("%s?sid=%s", cache, cookie.Value),
+		fmt.Sprintf("%s?sid=%s", cache, url.QueryEscape(cookie.Value)),
 		nil,
 	)
 
