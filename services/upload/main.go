@@ -1,8 +1,8 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -14,7 +14,12 @@ import (
 )
 
 type User struct {
-	UUID string `json:"id"`
+	OwnerId string `json:"owner_id"`
+	OwnerName string `json:"owner_name"`
+}
+
+type UploadRequest struct {
+	RepoUrl string `json:"repo_url"`
 }
 
 type Env struct {
@@ -35,22 +40,6 @@ func main() {
 
 		if authenticated != true {
 			http.Redirect(w, r, "http://localhost:3001/auth/github", http.StatusFound)
-
-			return
-		}
-
-		if r.Body == nil {
-			http.Error(w, "The body cannot be empty!", http.StatusBadRequest)
-
-			return
-		}
-	})
-
-	r.Post("/api/upload/env", func(w http.ResponseWriter, r *http.Request) {
-		authenticated := CheckSession(w, r)
-
-		if authenticated != true {
-			http.Error(w, errors.New("You are not authenticated!").Error(), http.StatusForbidden)
 
 			return
 		}
@@ -87,32 +76,86 @@ func main() {
 
 		var user User
 
-		if err = json.Unmarshal(authBody, &user); err != nil {
+		if err := json.Unmarshal(authBody, &user); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 
 			return
 		}
 
-		var env Env
+		var ur UploadRequest
 
-		if err = json.Unmarshal(body, &env); err != nil {
+		if err := json.Unmarshal(body, &ur); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		} 
+
+		builder := fmt.Sprintf(
+			"%s:%s@%s:%s",
+			os.Getenv("FC_SESSION_CACHE_USERNAME"),
+			os.Getenv("FC_SESSION_CACHE_PASSWORD"),
+			os.Getenv("FC_SESSION_CACHE_SERVICE_HOST"),
+			os.Getenv("FC_SESSION_CACHE_SERVICE_PORT"),
+		)
+
+		client := &http.Client{}
+
+		sid, err := r.Cookie("fc-hosting")
+
+		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 
 			return
 		}
 
-		//TODO: write internal service for creating deployments
+		req, err := http.NewRequest(
+			"POST",
+			builder,
+			bytes.NewReader([]byte(
+				fmt.Sprintf(
+					`{ "repo_name": %s, "owner_name": %s, "cookie": %s }`,
+					ur.RepoUrl,
+					user.OwnerName,
+					sid.Value,	
+				),
+			)),
+		)
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+
+			return
+		}
+
+		res, err := client.Do(req)
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+
+			return
+		}
+
+		if res.StatusCode == 200 {
+			w.WriteHeader(200)
+			w.Write([]byte("Your repository was deployed successfully!"))
+		}
 	})
 
 	http.ListenAndServe(":3000", r)
 }
 
 func CheckSession(w http.ResponseWriter, r *http.Request) bool {
-	cache := fmt.Sprintf("%s:%s", os.Getenv("FC_SESSION_SESSION_CACHE_HOST"), os.Getenv("FC_SESSION_CACHE_SERVICE_PORT"))
+	cache := fmt.Sprintf(
+		"%s:%s@%s:%s", 
+		os.Getenv("FC_SESSION_CACHE_USERNAME"),
+		os.Getenv("FC_SESSION_CACHE_PASSWORD"),
+		os.Getenv("FC_SESSION_CACHE_SERVICE_HOST"), 
+		os.Getenv("FC_SESSION_CACHE_SERVICE_PORT"),
+	)
 
 	cookie, err := r.Cookie("fc-hosting")
 
 	if err != nil {
+		fmt.Println(err)
+
 		return false
 	}
 
@@ -125,16 +168,22 @@ func CheckSession(w http.ResponseWriter, r *http.Request) bool {
 	)
 
 	if err != nil {
+		fmt.Println(err)
+
 		return false
 	}
 
 	res, err := client.Do(req)
 
 	if err != nil {
+		fmt.Println(err)
+
 		return false
 	}
 
 	if res.StatusCode == 200 {
+		fmt.Println(err)
+
 		return true
 	}
 
