@@ -3,6 +3,7 @@ const { MyCatLikesFirebaseServer } = require("my-cat-likes-firebase");
 const express = require("express");
 const session = require("express-session");
 const bcrypt = require("bcrypt");
+const cookies = require("cookie-parser");
 const fs = require("fs");
 
 const CacheStore = require("connect-fc-session-cache")(session);
@@ -45,21 +46,31 @@ app.use(
 	session({
 		name: "fc-hosting",
 		secret: readSecret("./config/session/secret"),
-		resave: true,
+		resave: false,
 		store,
 		saveUninitialized: false,
 		cookie: { secure: false }, //TODO: set to true when https is enabled
 	})
 );
+app.use(cookies())
 
 app.get("/auth/github/user", async (req, res) => {
-	const id = req.session.id;
+	const id = req.cookies["fc-hosting"];
 
-	store.get(id, async (session, err) => {
+	console.log(id)
+
+	store.get(id, async (err, session) => {
 		if (err !== null)
 			return res.status(403).send("Failed to validate auth.");
 
-		const token = session.access_token;
+		if (session === null)
+			return res.status(403).send("Failed to validate auth.");
+
+		console.log(session)
+
+		const token = session.session.access_token;
+
+		console.log(token)
 
 		const user = await fetch("https://api.github.com/user", {
 			headers: {
