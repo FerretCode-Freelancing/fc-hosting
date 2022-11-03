@@ -6,14 +6,21 @@ const bcrypt = require("bcrypt");
 const fs = require("fs");
 
 const CacheStore = require("connect-fc-session-cache")(session);
+const cacheUrl = `http://${readSecret("./config/cache/username")}:${readSecret(
+	"./config/cache/password"
+)}@${process.env.FC_SESSION_CACHE_SERVICE_HOST}:${
+	process.env.FC_SESSION_CACHE_SERVICE_PORT
+}` 
 
 const store = new CacheStore({
-	url: `http://${readSecret("./config/cache/username")}:${readSecret(
-		"./config/cache/password"
-	)}@${process.env.FC_SESSION_CACHE_SERVICE_HOST}:${
-		process.env.FC_SESSION_CACHE_SERVICE_PORT
-	}`,
+	url: cacheUrl,
 });
+// refresh url every so often if the cache IP changes
+setInterval(() => { 
+	store.refresh(
+		cacheUrl
+	)
+}, 10000)
 
 const firebase = new MyCatLikesFirebaseServer({
 	firebaseCredentialsPath: "./config/firebase/FIREBASE",
@@ -49,7 +56,7 @@ app.get("/auth/github/user", async (req, res) => {
 	const id = req.session.id;
 
 	store.get(id, async (session, err) => {
-		if (err !== null && !res.headersSent)
+		if (err !== null)
 			return res.status(403).send("Failed to validate auth.");
 
 		const token = session.access_token;
