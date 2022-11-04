@@ -11,7 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "@types/stripe": "^8.0.417",
-    "express": "^4.18.1",
+    "express": "^4.18.2",
     "express-session": "^1.17.3",
     "my-cat-likes-firebase": "^1.2.2",
     "stripe": "^9.16.0"
