@@ -1,4 +1,7 @@
+<div align="center">
 # FerretCode Hosting 📦
+<a href="https://ibb.co/p145dJv"><img src="https://i.ibb.co/fXrLH4Y/i-Phone-14-1-1.png" alt="i-Phone-14-1-1" border="0"></a>
+</div>
 Affordable hosting for small applications
 
 ## Who it's for 🧑
