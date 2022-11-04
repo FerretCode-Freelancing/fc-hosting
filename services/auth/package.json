@@ -10,7 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "bcrypt": "^5.0.1",
+    "bcrypt": "^5.1.0",
     "connect-fc-session-cache": "^1.1.8",
     "cookie-parser": "^1.4.6",
     "express": "^4.18.1",
