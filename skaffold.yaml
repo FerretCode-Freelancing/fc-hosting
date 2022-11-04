@@ -1,0 +1,47 @@
+apiVersion: skaffold/v3
+kind: Config
+metadata:
+  name: fc-hosting
+build:
+  artifacts:
+  - image: sthanguy/fc-auth
+    context: services/auth
+    docker:
+      dockerfile: Dockerfile
+  - image: sthanguy/fc-gateway
+    context: services/gateway
+    docker:
+      dockerfile: Dockerfile
+  - image: sthanguy/fc-logging
+    context: services/logging
+    docker:
+      dockerfile: Dockerfile
+  - image: sthanguy/fc-subscribe
+    context: services/subscribe
+    docker:
+      dockerfile: Dockerfile
+  - image: sthanguy/fc-upload
+    context: services/upload
+    docker:
+      dockerfile: Dockerfile
+manifests:
+  rawYaml:
+  - kubernetes/deployments/auth.yml
+  - kubernetes/deployments/buildkite.yml
+  - kubernetes/deployments/gateway.yml
+  - kubernetes/deployments/subscribe.yml
+  - kubernetes/deployments/upload.yml
+  - kubernetes/secrets/builder_secret.yml
+  - kubernetes/secrets/buildkite.yml
+  - kubernetes/secrets/custom_webhook_secret.yml
+  - kubernetes/secrets/firebase.yml
+  - kubernetes/secrets/github_auth.yml
+  - kubernetes/secrets/redis_secret.yml
+  - kubernetes/secrets/session_cache_secret.yml
+  - kubernetes/secrets/session_secret.yml
+  - kubernetes/secrets/stripe_auth_secret.yml
+  - kubernetes/services/auth.yml
+  - kubernetes/services/deploy.yml
+  - kubernetes/services/gateway.yml
+  - kubernetes/services/subscribe.yml
+  - kubernetes/services/upload.yml

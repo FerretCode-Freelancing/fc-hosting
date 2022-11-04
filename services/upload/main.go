@@ -48,7 +48,7 @@ func main() {
 		authenticated := CheckSession(w, r)
 
 		if authenticated != true {
-			http.Redirect(w, r, fmt.Sprintf("%s/auth/github", auth), http.StatusFound)
+			http.Error(w, "You are not authenticated!", http.StatusForbidden)
 
 			return
 		}
@@ -203,6 +203,10 @@ func CheckSession(w http.ResponseWriter, r *http.Request) bool {
 	}
 
 	defer res.Body.Close()
+
+	if res.StatusCode != 200 {
+		return true
+	}
 
 	if res.Body != nil {
 		return true

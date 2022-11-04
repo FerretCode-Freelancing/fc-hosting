@@ -57,20 +57,23 @@ app.use(cookies())
 app.get("/auth/github/user", async (req, res) => {
 	const id = req.cookies["fc-hosting"];
 
-	console.log(id)
+	console.log("signed", req.signedCookies);
+	console.log("unsigned", req.cookies);
+
+	console.log("id", id)
 
 	store.get(id, async (err, session) => {
 		if (err !== null)
 			return res.status(403).send("Failed to validate auth.");
 
 		if (session === null)
-			return res.status(403).send("Failed to validate auth.");
+			return res.status(403).send("Failed to validate session.");
 
-		console.log(session)
+		console.log("sess", session)
 
 		const token = session.session.access_token;
 
-		console.log(token)
+		console.log("token", token)
 
 		const user = await fetch("https://api.github.com/user", {
 			headers: {
