@@ -3,17 +3,25 @@ const { MyCatLikesFirebaseServer } = require("my-cat-likes-firebase");
 const express = require("express");
 const session = require("express-session");
 const bcrypt = require("bcrypt");
+const cookies = require("cookie-parser");
 const fs = require("fs");
 
 const CacheStore = require("connect-fc-session-cache")(session);
+const cacheUrl = `http://${readSecret("./config/cache/username")}:${readSecret(
+	"./config/cache/password"
+)}@${process.env.FC_SESSION_CACHE_SERVICE_HOST}:${
+	process.env.FC_SESSION_CACHE_SERVICE_PORT
+}` 
 
 const store = new CacheStore({
-	url: `http://${readSecret("./config/cache/username")}:${readSecret(
-		"./config/cache/password"
-	)}@${process.env.FC_SESSION_CACHE_SERVICE_HOST}:${
-		process.env.FC_SESSION_CACHE_SERVICE_PORT
-	}`,
+	url: cacheUrl,
 });
+// refresh url every so often if the cache IP changes
+setInterval(() => { 
+	store.refresh(
+		cacheUrl
+	)
+}, 10000)
 
 const firebase = new MyCatLikesFirebaseServer({
 	firebaseCredentialsPath: "./config/firebase/FIREBASE",
@@ -38,21 +46,34 @@ app.use(
 	session({
 		name: "fc-hosting",
 		secret: readSecret("./config/session/secret"),
-		resave: true,
+		resave: false,
 		store,
 		saveUninitialized: false,
 		cookie: { secure: false }, //TODO: set to true when https is enabled
 	})
 );
+app.use(cookies())
 
 app.get("/auth/github/user", async (req, res) => {
-	const id = req.session.id;
+	const id = req.cookies["fc-hosting"];
 
-	store.get(id, async (session, err) => {
-		if (err !== null && !res.headersSent)
+	console.log("signed", req.signedCookies);
+	console.log("unsigned", req.cookies);
+
+	console.log("id", id)
+
+	store.get(id, async (err, session) => {
+		if (err !== null)
 			return res.status(403).send("Failed to validate auth.");
 
-		const token = session.access_token;
+		if (session === null)
+			return res.status(403).send("Failed to validate session.");
+
+		console.log("sess", session)
+
+		const token = session.session.access_token;
+
+		console.log("token", token)
 
 		const user = await fetch("https://api.github.com/user", {
 			headers: {

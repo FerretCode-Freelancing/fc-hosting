@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -38,10 +37,18 @@ func main() {
 	r.Use(middleware.Timeout(60 * time.Second))
 
 	r.Post("/api/upload", func(w http.ResponseWriter, r *http.Request) {
+		client := &http.Client{}
+
+		auth := fmt.Sprintf(
+			"http://%s:%s",
+			os.Getenv("FC_AUTH_SERVICE_HOST"),
+			os.Getenv("FC_AUTH_SERVICE_PORT"),
+		)
+
 		authenticated := CheckSession(w, r)
 
 		if authenticated != true {
-			http.Redirect(w, r, "http://localhost:3001/auth/github", http.StatusFound)
+			http.Error(w, "You are not authenticated!", http.StatusForbidden)
 
 			return
 		}
@@ -52,7 +59,7 @@ func main() {
 			return
 		}
 
-		resp, err := http.Get("http://localhost:3001/auth/github/user")
+		userReq, err := http.NewRequest("GET", fmt.Sprintf("%s/auth/github/user", auth), nil)
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -60,7 +67,19 @@ func main() {
 			return
 		}
 
-		authBody, err := ioutil.ReadAll(resp.Body)
+		userReq.Close = true
+
+		res, err := client.Do(userReq)
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+
+			return
+		}
+
+		defer res.Body.Close()
+
+		authBody, err := ioutil.ReadAll(res.Body)
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -98,8 +117,6 @@ func main() {
 			os.Getenv("FC_BUILDER_SERVICE_PORT"),
 		)
 
-		client := &http.Client{}
-
 		sid, err := r.Cookie("fc-hosting")
 
 		if err != nil {
@@ -127,7 +144,7 @@ func main() {
 			return
 		}
 
-		res, err := client.Do(req)
+		resp, err := client.Do(req)
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -135,7 +152,9 @@ func main() {
 			return
 		}
 
-		if res.StatusCode == 200 {
+		defer res.Body.Close()
+
+		if resp.StatusCode == 200 {
 			w.WriteHeader(200)
 			w.Write([]byte("Your repository was deployed successfully!"))
 		}
@@ -165,7 +184,7 @@ func CheckSession(w http.ResponseWriter, r *http.Request) bool {
 
 	req, err := http.NewRequest(
 		"GET",
-		fmt.Sprintf("%s?sid=%s", cache, url.QueryEscape(cookie.Value)),
+		fmt.Sprintf("%s?sid=%s", cache, cookie.Value[4:36]), // cut string to 32 chars
 		nil,
 	)
 
@@ -183,9 +202,13 @@ func CheckSession(w http.ResponseWriter, r *http.Request) bool {
 		return false
 	}
 
-	if res.StatusCode == 200 {
-		fmt.Println(err)
+	defer res.Body.Close()
 
+	if res.StatusCode != 200 {
+		return true
+	}
+
+	if res.Body != nil {
 		return true
 	}
 
