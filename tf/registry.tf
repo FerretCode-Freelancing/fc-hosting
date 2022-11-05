@@ -8,7 +8,7 @@ terraform {
 }
 
 provider "kubernetes" {
-	config_path = "/root/.k3d/kubeconfig-fc-hosting.yaml"
+	config_path = "~/.kube/config"
 }
 
 resource "kubernetes_deployment" "fc-registry" {
@@ -93,12 +93,10 @@ resource "kubernetes_service" "fc-registry" {
     selector = {
       app = "fc-registry"
     }
-    type = "LoadBalancer"
+    type = "ClusterIP"
     port {
       port = 5000
-      target_port = 5000
     }
-    load_balancer_ip = "10.211.55.250"
   }
 }
 
