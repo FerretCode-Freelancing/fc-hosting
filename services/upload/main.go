@@ -158,10 +158,10 @@ func main() {
 
 		builder := fmt.Sprintf(
 			"http://%s:%s@%s:%s",
-			strings.Trim(os.Getenv("FC_BUILDER_CACHE_USERNAME"), "\n"),
-			strings.Trim(os.Getenv("FC_BUILDER_CACHE_PASSWORD"), "\n"),
-			os.Getenv("FC_BUILDER_SERVICE_HOST"),
-			os.Getenv("FC_BUILDER_SERVICE_PORT"),
+			strings.Trim(os.Getenv("FC_BUILDER_USERNAME"), "\n"),
+			strings.Trim(os.Getenv("FC_BUILDER_PASSWORD"), "\n"),
+			os.Getenv("FC_PROVISION_SERVICE_HOST"),
+			os.Getenv("FC_PROVISION_SERVICE_PORT"),
 		)
 		
 		req, err := http.NewRequest(
