@@ -82,8 +82,6 @@ app.get("/auth/github/user", async (req, res) => {
 
 		const userJson = await user.json();
 
-		console.log(userJson);
-
 		res.status(200).send({ 
 			owner_id: userJson.id,
 			owner_name: userJson.login

@@ -1,12 +1,12 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: fc-auth
+  name: fc-registry
   labels:
-    run: fc-auth
+    run: fc-registry
 spec:
   ports:
-    - port: 3000
+    - port: 5000
       protocol: TCP
   selector:
-    app: fc-auth
+    app: fc-registry

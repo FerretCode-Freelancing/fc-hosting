@@ -157,7 +157,7 @@ func main() {
 		fmt.Println(ur)
 
 		builder := fmt.Sprintf(
-			"http://%s:%s@%s:%s",
+			"http://%s:%s@%s:%s/build",
 			strings.Trim(os.Getenv("FC_BUILDER_USERNAME"), "\n"),
 			strings.Trim(os.Getenv("FC_BUILDER_PASSWORD"), "\n"),
 			os.Getenv("FC_PROVISION_SERVICE_HOST"),
@@ -169,7 +169,7 @@ func main() {
 			builder,
 			bytes.NewReader([]byte(
 				fmt.Sprintf(
-					`{ "repo_name": %s, "owner_name": %s, "cookie": %s }`,
+					`{ "repo_name": "%s", "owner_name": "%s", "cookie": "%s" }`,
 					ur.RepoUrl,
 					user.OwnerName,
 					sid.Value,	

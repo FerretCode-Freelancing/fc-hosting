@@ -1,12 +1,12 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: fc-auth
+  name: fc-provision
   labels:
-    run: fc-auth
+    run: fc-provision
 spec:
   ports:
     - port: 3000
       protocol: TCP
   selector:
-    app: fc-auth
+    app: fc-provision
