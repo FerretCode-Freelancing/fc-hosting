@@ -52,7 +52,7 @@ app.use(
 		cookie: { secure: false }, //TODO: set to true when https is enabled
 	})
 );
-app.use(cookies())
+app.use(cookies());
 
 app.get("/auth/github/user", async (req, res) => {
 	const id = req.cookies["fc-hosting"];
