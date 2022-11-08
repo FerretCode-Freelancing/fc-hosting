@@ -15,7 +15,7 @@ import (
 )
 
 type User struct {
-	OwnerId string `json:"owner_id"`
+	OwnerId int `json:"owner_id"`
 	OwnerName string `json:"owner_name"`
 }
 
@@ -62,10 +62,29 @@ func main() {
 		userReq, err := http.NewRequest("GET", fmt.Sprintf("%s/auth/github/user", auth), nil)
 
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, "Failed to validate auth!", http.StatusInternalServerError)
+
+			fmt.Println(err)
 
 			return
 		}
+
+		sid, err := r.Cookie("fc-hosting")
+
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+
+			fmt.Println(err)
+
+			return
+		}
+
+		cookie := &http.Cookie{
+			Name: "fc-hosting",
+			Value: sid.Value,
+		}
+
+		userReq.AddCookie(cookie)
 
 		userReq.Close = true
 
@@ -73,6 +92,16 @@ func main() {
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+
+			fmt.Println(err)
+
+			return
+		}
+
+		if res.StatusCode != 200 {
+			http.Error(w, "You are not authenticated!", http.StatusInternalServerError)
+
+			fmt.Println(err)
 
 			return
 		}
@@ -84,6 +113,8 @@ func main() {
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 
+			fmt.Println(err)
+
 			return
 		}
 
@@ -92,45 +123,53 @@ func main() {
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 
+			fmt.Println(err)
+
 			return
 		}
 
 		var user User
 
 		if err := json.Unmarshal(authBody, &user); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, "Failed to get the current user information!", http.StatusInternalServerError)
+
+			fmt.Println(err)
 
 			return
 		}
+
+		fmt.Println(user)
 
 		var ur UploadRequest
 
 		if err := json.Unmarshal(body, &ur); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		} 
+			http.Error(
+				w,
+				"Failed to get the information about the repository! You might need to add the repo_url field in your JSON body.", 
+				http.StatusInternalServerError,
+			)
 
-		builder := fmt.Sprintf(
-			"http://%s:%s@%s:%s",
-			strings.Trim(os.Getenv("FC_BUILDER_CACHE_USERNAME"), "\n"),
-			strings.Trim(os.Getenv("FC_BUILDER_CACHE_PASSWORD"), "\n"),
-			os.Getenv("FC_BUILDER_SERVICE_HOST"),
-			os.Getenv("FC_BUILDER_SERVICE_PORT"),
-		)
-
-		sid, err := r.Cookie("fc-hosting")
-
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			fmt.Println(err)
 
 			return
-		}
+		} 
 
+		fmt.Println(ur)
+
+		builder := fmt.Sprintf(
+			"http://%s:%s@%s:%s/build",
+			strings.Trim(os.Getenv("FC_BUILDER_USERNAME"), "\n"),
+			strings.Trim(os.Getenv("FC_BUILDER_PASSWORD"), "\n"),
+			os.Getenv("FC_PROVISION_SERVICE_HOST"),
+			os.Getenv("FC_PROVISION_SERVICE_PORT"),
+		)
+		
 		req, err := http.NewRequest(
 			"POST",
 			builder,
 			bytes.NewReader([]byte(
 				fmt.Sprintf(
-					`{ "repo_name": %s, "owner_name": %s, "cookie": %s }`,
+					`{ "repo_name": "%s", "owner_name": "%s", "cookie": "%s" }`,
 					ur.RepoUrl,
 					user.OwnerName,
 					sid.Value,	
@@ -141,6 +180,8 @@ func main() {
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 
+			fmt.Println(err)
+
 			return
 		}
 
@@ -148,6 +189,8 @@ func main() {
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+
+			fmt.Println(err)
 
 			return
 		}

@@ -4,6 +4,7 @@ const express = require("express");
 const session = require("express-session");
 const bcrypt = require("bcrypt");
 const cookies = require("cookie-parser");
+const cors = require("cors");
 const fs = require("fs");
 
 const CacheStore = require("connect-fc-session-cache")(session);
@@ -41,7 +42,14 @@ function catchError(err, res) {
 }
 
 const app = express();
+
 app.set("trust proxy", 1);
+app.use(cookies(readSecret("./config/session/secret")))
+app.use(cors({
+	credentials: true,
+	origin: "http://localhost:3001",
+	optionsSuccessStatus: 200,
+}));
 app.use(
 	session({
 		name: "fc-hosting",
@@ -52,15 +60,9 @@ app.use(
 		cookie: { secure: false }, //TODO: set to true when https is enabled
 	})
 );
-app.use(cookies());
 
 app.get("/auth/github/user", async (req, res) => {
-	const id = req.cookies["fc-hosting"];
-
-	console.log("signed", req.signedCookies);
-	console.log("unsigned", req.cookies);
-
-	console.log("id", id)
+	let id = req.signedCookies["fc-hosting"];
 
 	store.get(id, async (err, session) => {
 		if (err !== null)
@@ -69,11 +71,7 @@ app.get("/auth/github/user", async (req, res) => {
 		if (session === null)
 			return res.status(403).send("Failed to validate session.");
 
-		console.log("sess", session)
-
 		const token = session.session.access_token;
-
-		console.log("token", token)
 
 		const user = await fetch("https://api.github.com/user", {
 			headers: {
@@ -82,7 +80,7 @@ app.get("/auth/github/user", async (req, res) => {
 			},
 		}).catch((err) => catchError(err, res));
 
-		const userJson = user.json();
+		const userJson = await user.json();
 
 		res.status(200).send({ 
 			owner_id: userJson.id,
