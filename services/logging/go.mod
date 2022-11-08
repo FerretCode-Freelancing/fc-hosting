@@ -1,4 +1,4 @@
-module example.com/gateway
+module github.com/ferretcode-freelancing/logging
 
 go 1.19
 
