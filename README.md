@@ -9,7 +9,7 @@
 FerretCode Hosting is for people who want to host small applications or projects at a cheap price
 
 ## How it works 📝
-1. Upload a schema file that points to a GitHub Repository
+1. Choose your GitHub repository
 2. Paste your environment variables
 3. Make a name for your app
 4. Wait for deployment
