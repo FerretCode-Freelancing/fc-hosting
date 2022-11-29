@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 
+	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go/v4"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -68,8 +70,102 @@ func main() {
 		}
 
 		data := dsnap.Data()
+		stringified, err := json.Marshal(data)
 
-		fmt.Println(data)
+		if err != nil {
+			http.Error(w, "There was an issue fetching your projects!", http.StatusInternalServerError)
+
+			fmt.Println(err)
+
+			return
+		}
+
+		w.WriteHeader(200)
+		w.Write(stringified)
+	})
+	
+	r.Post("/api/projects/new", func(w http.ResponseWriter, r *http.Request) {
+		app, ctx, err := InitializeFirebase()
+		
+		if err != nil {
+			http.Error(w, "There was an issue creating your project.", http.StatusInternalServerError)
+
+			fmt.Println(err)
+
+			return
+		}
+
+		client, err := app.Firestore(ctx)
+		 
+		if err != nil {
+			http.Error(w, "There was an issue creating your project.", http.StatusInternalServerError)
+
+			fmt.Println(err)
+
+			return 
+		}
+
+		userId, err := GetUserId(w, r)
+
+		if err != nil {
+			http.Error(w, "There was an issue fetching the current user.", http.StatusInternalServerError)
+
+			fmt.Println(err)
+
+			return
+		}
+
+		name := r.URL.Query().Get("name")
+		unescaped, err := url.QueryUnescape(name)
+
+		if err != nil {
+			http.Error(w, "There was an error fetching the name of your project.", http.StatusBadRequest)
+
+			return
+		}
+
+		dsnap := client.Collection("users").Doc(fmt.Sprint(userId))
+
+		doc, err := dsnap.Get(ctx)
+
+		if err != nil {
+			http.Error(w, "There was an error creating the project.", http.StatusInternalServerError)
+
+			fmt.Println(err)
+
+			return
+		}
+
+		type Projects struct {
+			Projects []map[string]interface{} `json:"projects"`
+		}
+		data := doc.Data()
+
+		var projects Projects
+
+		bytes, err := json.Marshal(data)
+
+		if err != nil {
+			http.Error(w, "There was an error creating the project.", http.StatusInternalServerError)
+
+			fmt.Println(err)
+
+			return
+		}
+
+		if err := json.Unmarshal(bytes, &projects); err != nil {
+			http.Error(w, "There was an error creating the project.", http.StatusInternalServerError)
+
+			fmt.Println(err)
+
+			return
+		}
+		
+		dsnap.Update(ctx, []firestore.Update{
+			{
+				Path: "projects",
+			},
+		})
 	})
 }
 
