@@ -1,0 +1,8 @@
+go 1.19
+
+use (
+	./services/gateway
+	./services/logging
+	./services/projects
+	./services/upload
+)

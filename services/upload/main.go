@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -45,14 +45,6 @@ func main() {
 			os.Getenv("FC_AUTH_SERVICE_PORT"),
 		)
 
-		authenticated := CheckSession(w, r)
-
-		if authenticated != true {
-			http.Error(w, "You are not authenticated!", http.StatusForbidden)
-
-			return
-		}
-
 		if r.Body == nil {
 			http.Error(w, "The body cannot be empty!", http.StatusBadRequest)
 
@@ -69,7 +61,7 @@ func main() {
 			return
 		}
 
-		sid, err := r.Cookie("fc-hosting")
+		cookie, err := r.Cookie("fc-hosting")
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -77,11 +69,6 @@ func main() {
 			fmt.Println(err)
 
 			return
-		}
-
-		cookie := &http.Cookie{
-			Name: "fc-hosting",
-			Value: sid.Value,
 		}
 
 		userReq.AddCookie(cookie)
@@ -108,7 +95,7 @@ func main() {
 
 		defer res.Body.Close()
 
-		authBody, err := ioutil.ReadAll(res.Body)
+		authBody, err := io.ReadAll(res.Body)
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -118,7 +105,7 @@ func main() {
 			return
 		}
 
-		body, err := ioutil.ReadAll(r.Body)
+		body, err := io.ReadAll(r.Body)
 
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -172,7 +159,7 @@ func main() {
 					`{ "repo_name": "%s", "owner_name": "%s", "cookie": "%s" }`,
 					ur.RepoUrl,
 					user.OwnerName,
-					sid.Value,	
+					cookie.Value,	
 				),
 			)),
 		)
@@ -204,56 +191,4 @@ func main() {
 	})
 
 	http.ListenAndServe(":3000", r)
-}
-
-func CheckSession(w http.ResponseWriter, r *http.Request) bool {
-	cache := fmt.Sprintf(
-		"http://%s:%s@%s:%s", 
-		strings.Trim(os.Getenv("FC_SESSION_CACHE_USERNAME"), "\n"),
-		strings.Trim(os.Getenv("FC_SESSION_CACHE_PASSWORD"), "\n"),
-		os.Getenv("FC_SESSION_CACHE_SERVICE_HOST"), 
-		os.Getenv("FC_SESSION_CACHE_SERVICE_PORT"),
-	)
-
-	cookie, err := r.Cookie("fc-hosting")
-
-	if err != nil {
-		fmt.Println(err)
-
-		return false
-	}
-
-	client := &http.Client{}
-
-	req, err := http.NewRequest(
-		"GET",
-		fmt.Sprintf("%s?sid=%s", cache, cookie.Value[4:36]), // cut string to 32 chars
-		nil,
-	)
-
-	if err != nil {
-		fmt.Println(err)
-
-		return false
-	}
-
-	res, err := client.Do(req)
-
-	if err != nil {
-		fmt.Println(err)
-
-		return false
-	}
-
-	defer res.Body.Close()
-
-	if res.StatusCode != 200 {
-		return true
-	}
-
-	if res.Body != nil {
-		return true
-	}
-
-	return false
 }
