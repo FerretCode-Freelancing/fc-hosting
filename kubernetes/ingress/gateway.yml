@@ -6,5 +6,5 @@ spec:
   defaultBackend:
     service:
       name: fc-gateway
-      ports:
-        - number: 3001
+      port:
+        number: 1337

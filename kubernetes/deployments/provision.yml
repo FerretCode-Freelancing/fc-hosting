@@ -4,6 +4,9 @@ metadata:
   name: fc-provision
   labels:
     app: fc-provision
+  annotations:
+    container.apparmor.security.beta.kubernetes.io/img: unconfined
+    container.seccomp.security.alpha.kubernetes.io/img: unconfined
 spec:
   replicas: 1
   selector:
@@ -18,8 +21,14 @@ spec:
         - name: fc-provision
           image: sthanguy/fc-provision:latest
           imagePullPolicy: Always
+          securityContext:
+            privileged: true
           ports:
             - containerPort: 3000
+          volumeMounts:
+            - name: registry-certs
+              mountPath: /certs
+              readOnly: true
           env:
           - name: FC_BUILDER_USERNAME
             valueFrom:
@@ -45,3 +54,7 @@ spec:
                 name: session-cache-secret
                 key: password
                 optional: false
+      volumes:
+        - name: registry-certs
+          secret:
+            secretName: registry-cert

@@ -37,6 +37,10 @@ func main() {
 		Request(w, r)
 	})
 
+	r.Patch("/*", func(w http.ResponseWriter, r *http.Request) {
+		Request(w, r)
+	})
+
 	http.ListenAndServe(":3000", r)
 }
 

@@ -10,3 +10,4 @@ spec:
       protocol: TCP
   selector:
     app: fc-registry
+  clusterIP: 10.43.122.221

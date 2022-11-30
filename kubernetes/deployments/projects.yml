@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fc-projects
+  labels:
+    apps: fc-projects
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fc-projects
+  template:
+    metadata:
+      labels:
+        app: fc-projects
+    spec:
+      containers:
+        - name: fc-projects
+          image: sthanguy/fc-projects:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          volumeMounts:
+            - name: firebase-secret
+              mountPath: "/usr/route/config/firebase"
+              readOnly: true
+          env:
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: "/usr/route/config/firebase/FIREBASE"
+      volumes:
+        - name: firebase-secret
+          secret:
+            secretName: firebase-secret

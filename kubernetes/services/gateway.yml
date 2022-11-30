@@ -8,5 +8,5 @@ spec:
   type: LoadBalancer
   ports:
     - protocol: TCP
-      port: 3001
+      port: 1337 
       targetPort: 3000

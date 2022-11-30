@@ -26,7 +26,7 @@ warn('ℹ️ Open {tiltfile_path} in your favorite editor to get started.'.forma
 #   Tilt will automatically associate image builds with the resource(s)
 #   that reference them (e.g. via Kubernetes or Docker Compose YAML).
 #
-#   More info: https://docs.tilt.dev/api.html#api.docker_build
+#   More info: https://docs.tilt.dev/api.html#api.docker_build_with_restart
 #
 # docker_build('registry.example.com/my-image',
 #              context='.',
@@ -48,7 +48,7 @@ warn('ℹ️ Open {tiltfile_path} in your favorite editor to get started.'.forma
 
 load('ext://restart_process', 'docker_build_with_restart')
 
-docker_build('sthanguy/fc-auth',
+docker_build_with_restart('sthanguy/fc-auth',
 							context='./services/auth',
 							entrypoint='node .',
 							dockerfile='./services/auth/Dockerfile',
@@ -58,7 +58,7 @@ docker_build('sthanguy/fc-auth',
 							]
 )
 
-docker_build('sthanguy/fc-gateway',
+docker_build_with_restart('sthanguy/fc-gateway',
 							context='./services/gateway',
 							entrypoint='go run main.go',
 							dockerfile='./services/gateway/Dockerfile',
@@ -68,7 +68,7 @@ docker_build('sthanguy/fc-gateway',
 							]
 )
 
-docker_build('sthanguy/fc-subscribe',
+docker_build_with_restart('sthanguy/fc-subscribe',
 							context='./services/subscribe',
 							entrypoint='node .',
 							dockerfile='./services/subscribe/Dockerfile',
@@ -78,24 +78,39 @@ docker_build('sthanguy/fc-subscribe',
 							]
 )
 
-docker_build('sthanguy/fc-upload',
+docker_build_with_restart('sthanguy/fc-upload',
 							context='./services/upload',
 							entrypoint='go run main.go',
 							dockerfile='./services/upload/Dockerfile',
 							extra_tag='latest',
 							live_update=[
 								sync('./services/upload', '/usr/route'),
+								run('cd /usr/route && go build -v -o /usr/route'),
+								run('route')
 							]
 )
 
-docker_build('sthanguy/fc-provision',
+docker_build_with_restart('sthanguy/fc-projects',
+							context='./services/projects',
+							entrypoint='go run main.go',
+							dockerfile='./services/projects/Dockerfile',
+							extra_tag='latest',
+							live_update=[
+								sync('./services/projects', '/usr/route'),
+								run('cd /usr/route && go build -v -o /usr/route'),
+								run('route')
+							]
+)
+
+docker_build_with_restart('sthanguy/fc-provision',
 							context='../fc-provision',
 							dockerfile='../fc-provision/Dockerfile',
 							entrypoint='builder',
-							extra_tag='latest',
+							extra_tag='sthanguy/fc-provision:latest',
 							live_update=[
 								sync('../fc-provision', '/usr/src/provision'),
-								run('cd /usr/src/provision && go build -v -o /usr/local/bin/builder')
+								run('cd /usr/src/provision && go build -v -o /usr/local/bin/builder'),
+								run('builder')
 							])
 
 # Apply Kubernetes manifests
@@ -107,9 +122,9 @@ docker_build('sthanguy/fc-provision',
 # k8s_yaml(['k8s/deployment.yaml', 'k8s/service.yaml'])
 
 # deployments
-k8s_yaml(['kubernetes/deployments/auth.yml', 'kubernetes/deployments/gateway.yml', 'kubernetes/deployments/subscribe.yml', 'kubernetes/deployments/upload.yml', 'kubernetes/deployments/cache.yml', 'kubernetes/deployments/registry.yml', 'kubernetes/deployments/provision.yml'])
+k8s_yaml(['kubernetes/deployments/auth.yml', 'kubernetes/deployments/gateway.yml', 'kubernetes/deployments/subscribe.yml', 'kubernetes/deployments/upload.yml', 'kubernetes/deployments/cache.yml', 'kubernetes/deployments/registry.yml', 'kubernetes/deployments/provision.yml', 'kubernetes/deployments/projects.yml'])
 # services
-k8s_yaml(['kubernetes/services/auth.yml', 'kubernetes/services/gateway.yml', 'kubernetes/services/subscribe.yml', 'kubernetes/services/upload.yml', 'kubernetes/services/cache.yml', 'kubernetes/services/registry.yml', 'kubernetes/services/provision.yml'])
+k8s_yaml(['kubernetes/services/auth.yml', 'kubernetes/services/gateway.yml', 'kubernetes/services/subscribe.yml', 'kubernetes/services/upload.yml', 'kubernetes/services/cache.yml', 'kubernetes/services/registry.yml', 'kubernetes/services/provision.yml', 'kubernetes/services/projects.yml'])
 # pvcs
 k8s_yaml(['kubernetes/pvc/registry.yml'])
 # ingress

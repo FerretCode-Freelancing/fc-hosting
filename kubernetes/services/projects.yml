@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: fc-projects
+  labels:
+    run: fc-projects
+spec:
+  ports:
+    - port: 3000
+      protocol: TCP
+  selector:
+    app: fc-projects
