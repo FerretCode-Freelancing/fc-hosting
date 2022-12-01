@@ -50,10 +50,10 @@ func main() {
 			return
 		}
 
-		if request.Webhook == true {
+		if request.Webhook {
 			request.Message = fmt.Sprintf(
 				"%s - %s",
-				time.Now().Local().String(),
+				time.Now().Local().Format("RFC822"),
 				request.Message,
 			)
 
