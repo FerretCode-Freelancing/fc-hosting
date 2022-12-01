@@ -2,40 +2,86 @@ const fs = require("fs");
 const stripe = require("stripe")(
   fs.readFileSync("./config/stripe/key", "utf8").replace(/(\r\n|\n|\r)/gm, "")
 );
+const firebase = require("my-cat-likes-firebase");
 const express = require("express");
+
+const firestore = new firebase.MyCatLikesFirebaseServer({
+  firebaseCredentialsPath: "./config/firebase/FIREBASE",
+  loggingEnabled: false,
+});
 
 let app = express();
 
 app.get("/api/subscribe/success", async (req, res) => {
   const sessionId = req.query.session_id;
+  const projectId = req.query.project_id;
 
-  const session = await stripe.checkout.sessions.retrieve(sessionId);
+  const session = await stripe.checkout.sessions.retrieve(sessionId, {
+    expand: ["subscription"],
+  });
 
   if (session) {
-    res.redirect("http://localhost:3001/frontend/success");
+    if (!session.subscription)
+      return res.status(403).send("The checkout failed.");
+
+    try {
+      const owner = await fetch(
+        `http://${process.env.FC_AUTH_SERVICE_HOST}:${process.env.FC_AUTH_SERVICE_PORT}/auth/user`
+      );
+
+      const json = await owner.json();
+
+      firestore.updateDoc(
+        {
+          projects: {
+            [projectId]: {
+              subscriptionId: session.subscription,
+            },
+          },
+        },
+        `users/${json.owner_id}`
+      );
+
+      res.status(200).send("The checkout succeeded.");
+    } catch (err) {
+      res.status(500).send("There was an error validating the subscription.");
+    }
   } else return res.status(403).send("Invalid checkout session");
 });
 
 app.get("/api/subscribe/validate", async (req, res) => {
   const customerId = req.query.customer_id;
+  const projectId = req.query.project_id;
 
-  const subscriptions = await stripe.customers.retrieve(customerId, {
-    expand: ["subscriptions"],
-  });
+  try {
+    const subscriptions = await stripe.customers.retrieve(customerId, {
+      expand: ["subscriptions"],
+    });
 
-  let sorted = subscriptions.subscriptions.data.sort(
-    (a, b) => a.created - b.created
-  );
-  sorted = sorted.filter((sub) => sub.status === "active")
+    const owner = await fetch(
+      `http://${process.env.FC_AUTH_SERVICE_HOST}:${process.env.FC_AUTH_SERVICE_PORT}/auth/user`
+    );
 
-  if (!sorted.length)
-    return res.status(200).send({ active: false })
+    const json = await owner.json();
 
-  res.status(200).send({ active: true });
+    const user = await firestore.getDoc(`users/${json.owner_id}`);
+    const project = user.projects[projectId];
+
+    const active = subscriptions.subscriptions.data.some(
+      (subscription) => subscription.id === project.subscriptionId
+    );
+
+    if (active) return res.status(200).send({ active });
+
+    res.status(200).send({ active });
+  } catch (err) {
+    res.status(500).send("There was an error validating the subscription.");
+  }
 });
 
 app.get("/api/subscribe/new/:price", async (req, res) => {
   const { price } = req.params;
+  const { projectId } = req.query;
 
   const product = await stripe.products.search({
     query: 'name~"FerretCode Hosting"',
@@ -46,8 +92,8 @@ app.get("/api/subscribe/new/:price", async (req, res) => {
   });
 
   const stripePrice = prices.data.find((p) => {
-    return p.unit_amount === price * 100; 
-  }); 
+    return p.unit_amount === price * 100;
+  });
 
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
@@ -57,9 +103,8 @@ app.get("/api/subscribe/new/:price", async (req, res) => {
         quantity: 1,
       },
     ],
-    success_url:
-      "http://localhost:3001/api/subscribe/success?session_id={CHECKOUT_SESSION_ID}",
-    cancel_url: "http://localhost:3001/frontend/canceled",
+    success_url: `http://localhost:1337/api/subscribe/success?session_id={CHECKOUT_SESSION_ID}&project_id=${projectId}`,
+    cancel_url: "http://localhost:1337/frontend/canceled",
   });
 
   res.redirect(session.url);
