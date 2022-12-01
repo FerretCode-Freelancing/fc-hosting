@@ -5,4 +5,5 @@ use (
 	./services/logging
 	./services/projects
 	./services/upload
+	./services/deploy
 )
