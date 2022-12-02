@@ -24,6 +24,9 @@ spec:
             - name: stripe-auth-secret
               mountPath: "/usr/route/config/stripe"
               readOnly: true
+            - name: firebase-secret
+              mountPath: "/usr/route/config/firebase"
+              readOnly: true
         - name: fc-logging
           image: sthanguy/fc-logging:latest
           imagePullPolicy: Always
@@ -38,11 +41,14 @@ spec:
           secret:
             secretName: custom-webhook-secret
             items:
-            - key: secret
-              path: secret
+              - key: secret
+                path: secret
         - name: stripe-auth-secret
           secret:
             secretName: stripe-auth-secret
             items:
-            - key: key
-              path: key
+              - key: key
+                path: key
+        - name: firebase-secret
+          secret:
+            secretName: firebase-secret
