@@ -31,4 +31,4 @@ jobs:
         run: docker build ./services/logging --tag "sthanguy/fc-logging:$GITHUB_SHA"
 
       - name: Login to Docker Registry
-        run: docker login --username ${{ secrets.DOCKER_HUB_USERNAME }} --password ${{ secrets.DOCKER_HUB_PASSWORD }}
+        run: echo ${{ secrets.DOCKER_HUB_PASSWORD }} | docker login --username ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
