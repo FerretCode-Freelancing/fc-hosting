@@ -15,25 +15,20 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Build the Auth microservice
-      run: docker build ./services/auth --file Dockerfile --tag "sthanguy/fc-auth:$GITHUB_SHA"
+      run: docker build ./services/auth --tag "sthanguy/fc-auth:$GITHUB_SHA"
       
-    - uses: actions/checkout@v3
     - name: Build the Subscribe microservice
-      run: docker build ./services/subscribe --file Dockerfile --tag "sthanguy/fc-subscribe:$GITHUB_SHA"
-      
-    - uses: actions/checkout@v3
+      run: docker build ./services/subscribe --tag "sthanguy/fc-subscribe:$GITHUB_SHA"
+
     - name: Build the Deploy microservice
-      run: docker build ./services/deploy --file Dockerfile --tag "sthanguy/fc-deploy:$GITHUB_SHA"
+      run: docker build ./services/deploy --tag "sthanguy/fc-deploy:$GITHUB_SHA"
       
-    - uses: actions/checkout@v3
     - name: Build the Gateway microservice
-      run: docker build ./services/gateway --file Dockerfile --tag "sthanguy/fc-gateway:$GITHUB_SHA"
+      run: docker build ./services/gateway --tag "sthanguy/fc-gateway:$GITHUB_SHA"
       
-    - uses: actions/checkout@v3
     - name: Build the Upload microservice
-      run: docker build ./services/gateway --file Dockerfile --tag "sthanguy/fc-upload:$GITHUB_SHA"
+      run: docker build ./services/gateway --tag "sthanguy/fc-upload:$GITHUB_SHA"
       
-    - uses: actions/checkout@v3
     - name: Build the Logging sidecar
-      run: docker build ./services/logging --file Dockerfile --tag "sthanguy/fc-logging:$GITHUB_SHA"
+      run: docker build ./services/logging --tag "sthanguy/fc-logging:$GITHUB_SHA"
       
