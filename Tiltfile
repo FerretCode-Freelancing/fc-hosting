@@ -115,7 +115,7 @@ docker_build_with_restart('sthanguy/fc-provision',
 )
 
 docker_build_with_restart('sthanguy/fc-deploy',
-							context='./services/deploy')
+							context='./services/deploy',
 							dockerfile='./services/deploy/Dockerfile',
 							entrypoint='go run main.go',
 							extra_tag='latest',

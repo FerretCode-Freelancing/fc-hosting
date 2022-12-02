@@ -11,7 +11,8 @@ spec:
       app: fc-deploy
   template:
     metadata:
-      labels: app; fc-deploy
+      labels:
+        app: fc-deploy
     spec:
       containers:
         - name: fc-deploy
