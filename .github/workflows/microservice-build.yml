@@ -1,0 +1,39 @@
+name: Microservice Build CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build the Auth microservice
+      run: docker build ./services/auth --file Dockerfile --tag "sthanguy/fc-auth:$GITHUB_SHA"
+      
+    - uses: actions/checkout@v3
+    - name: Build the Subscribe microservice
+      run: docker build ./services/subscribe --file Dockerfile --tag "sthanguy/fc-subscribe:$GITHUB_SHA"
+      
+    - uses: actions/checkout@v3
+    - name: Build the Deploy microservice
+      run: docker build ./services/deploy --file Dockerfile --tag "sthanguy/fc-deploy:$GITHUB_SHA"
+      
+    - uses: actions/checkout@v3
+    - name: Build the Gateway microservice
+      run: docker build ./services/gateway --file Dockerfile --tag "sthanguy/fc-gateway:$GITHUB_SHA"
+      
+    - uses: actions/checkout@v3
+    - name: Build the Upload microservice
+      run: docker build ./services/gateway --file Dockerfile --tag "sthanguy/fc-upload:$GITHUB_SHA"
+      
+    - uses: actions/checkout@v3
+    - name: Build the Logging sidecar
+      run: docker build ./services/logging --file Dockerfile --tag "sthanguy/fc-logging:$GITHUB_SHA"
+      
