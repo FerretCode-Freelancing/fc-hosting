@@ -1,5 +1,5 @@
 FROM node:18-alpine
-RUN useradd -u 6891 nonroot
+RUN adduser -u 6891 nonroot
 USER nonroot
 ADD package.json /tmp/package.json
 RUN cd /tmp && npm install && \

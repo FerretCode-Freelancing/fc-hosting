@@ -1,5 +1,5 @@
 FROM golang:1.19-alpine
-RUN useradd -u 6891 nonroot
+RUN adduser -u 6891 nonroot
 USER nonroot
 WORKDIR /usr/logger
 COPY go.mod go.sum ./
