@@ -1,5 +1,7 @@
 FROM node:18-alpine
-RUN adduser -u 6891 nonroot
+RUN adduser -D nonroot \
+  && echo "nonroot ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/nonroot \
+  && chmod 0440 /etc/sudoers/nonroot
 USER nonroot
 ADD package.json /tmp/package.json
 RUN cd /tmp && npm install && \
