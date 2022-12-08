@@ -12,15 +12,6 @@
 #   multiline strings and common string operations such as formatting.
 #
 #   More info: https://docs.tilt.dev/api.html#api.warn
-print("""
------------------------------------------------------------------
-✨ Hello Tilt! This appears in the (Tiltfile) pane whenever Tilt
-   evaluates this file.
------------------------------------------------------------------
-""".strip())
-warn('ℹ️ Open {tiltfile_path} in your favorite editor to get started.'.format(
-    tiltfile_path=config.main_path))
-
 
 # Build Docker image
 #   Tilt will automatically associate image builds with the resource(s)
@@ -111,7 +102,20 @@ docker_build_with_restart('sthanguy/fc-provision',
 								sync('../fc-provision', '/usr/src/provision'),
 								run('cd /usr/src/provision && go build -v -o /usr/local/bin/builder'),
 								run('builder')
-							])
+							]
+)
+
+docker_build_with_restart('sthanguy/fc-deploy',
+							context='./services/deploy',
+							dockerfile='./services/deploy/Dockerfile',
+							entrypoint='go run main.go',
+							extra_tag='latest',
+							live_update=[
+								sync('./services/deploy', '/usr/route'),
+								run('cd /usr/route && go build -v -o /usr/route'),
+								run('route')
+							]
+)
 
 # Apply Kubernetes manifests
 #   Tilt will build & push any necessary images, re-deploying your
@@ -122,9 +126,9 @@ docker_build_with_restart('sthanguy/fc-provision',
 # k8s_yaml(['k8s/deployment.yaml', 'k8s/service.yaml'])
 
 # deployments
-k8s_yaml(['kubernetes/deployments/auth.yml', 'kubernetes/deployments/gateway.yml', 'kubernetes/deployments/subscribe.yml', 'kubernetes/deployments/upload.yml', 'kubernetes/deployments/cache.yml', 'kubernetes/deployments/registry.yml', 'kubernetes/deployments/provision.yml', 'kubernetes/deployments/projects.yml'])
+k8s_yaml(['kubernetes/deployments/auth.yml', 'kubernetes/deployments/gateway.yml', 'kubernetes/deployments/subscribe.yml', 'kubernetes/deployments/upload.yml', 'kubernetes/deployments/cache.yml', 'kubernetes/deployments/registry.yml', 'kubernetes/deployments/provision.yml', 'kubernetes/deployments/projects.yml', 'kubernetes/deployments/deploy.yml'])
 # services
-k8s_yaml(['kubernetes/services/auth.yml', 'kubernetes/services/gateway.yml', 'kubernetes/services/subscribe.yml', 'kubernetes/services/upload.yml', 'kubernetes/services/cache.yml', 'kubernetes/services/registry.yml', 'kubernetes/services/provision.yml', 'kubernetes/services/projects.yml'])
+k8s_yaml(['kubernetes/services/auth.yml', 'kubernetes/services/gateway.yml', 'kubernetes/services/subscribe.yml', 'kubernetes/services/upload.yml', 'kubernetes/services/cache.yml', 'kubernetes/services/registry.yml', 'kubernetes/services/provision.yml', 'kubernetes/services/projects.yml', 'kubernetes/services/deploy.yml'])
 # pvcs
 k8s_yaml(['kubernetes/pvc/registry.yml'])
 # ingress

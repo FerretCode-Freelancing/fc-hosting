@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fc-deploy
+  labels:
+    apps: fc-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fc-deploy
+  template:
+    metadata:
+      labels:
+        app: fc-deploy
+    spec:
+      containers:
+        - name: fc-deploy
+          image: sthanguy/fc-deploy:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000

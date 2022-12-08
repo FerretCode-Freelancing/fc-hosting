@@ -5,10 +5,14 @@
 
 <h3 align="center">Affordable hosting for small applications</h3>
 
+[![Microservice Build CI](https://github.com/FerretCode-Freelancing/fc-hosting/actions/workflows/microservice-build.yml/badge.svg)](https://github.com/FerretCode-Freelancing/fc-hosting/actions/workflows/microservice-build.yml)
+
 ## Who it's for 🧑
+
 FerretCode Hosting is for people who want to host small applications or projects at a cheap price
 
 ## How it works 📝
+
 1. Choose your GitHub repository
 2. Paste your environment variables
 3. Make a name for your app
@@ -16,12 +20,15 @@ FerretCode Hosting is for people who want to host small applications or projects
 5. And you're done!
 
 ## Pricing 💵
+
 Pricing is subject to change.
+
 - <500kb size: $1/month
 - <1mb size: $2/month
 - <5mb size: $5/month
 - For project sizes >5mb please contact me for custom pricing.
 
 ## Support 📧
+
 - Join the [Discord](https://discord.gg/NnM5QrBTux) and go to #hosting-support
 - Create an issue
