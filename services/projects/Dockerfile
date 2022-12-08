@@ -1,7 +1,7 @@
 FROM golang:1.19-alpine
 RUN adduser -D nonroot
 USER nonroot
-WORKDIR /usr/route
+WORKDIR /home/nonroot/route
 COPY go.mod go.sum ./
 RUN go mod download && go mod verify
 COPY . . 

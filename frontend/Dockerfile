@@ -1,5 +1,5 @@
 FROM node:18-alpine
-COPY . ./usr/route
-WORKDIR /usr/route
+COPY . ./home/nonroot/route
+WORKDIR /home/nonroot/route
 RUN ["npm", "install"]
 CMD node .

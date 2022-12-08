@@ -45,7 +45,7 @@ docker_build_with_restart('sthanguy/fc-auth',
 							dockerfile='./services/auth/Dockerfile',
 							extra_tag='latest',
 							live_update=[
-								sync('./services/auth', '/usr/route'),
+								sync('./services/auth', '/home/nonroot/route'),
 							]
 )
 
@@ -65,7 +65,7 @@ docker_build_with_restart('sthanguy/fc-subscribe',
 							dockerfile='./services/subscribe/Dockerfile',
 							extra_tag='latest',
 							live_update=[
-								sync('./services/subscribe', '/usr/route'),
+								sync('./services/subscribe', '/home/nonroot/route'),
 							]
 )
 
@@ -75,8 +75,8 @@ docker_build_with_restart('sthanguy/fc-upload',
 							dockerfile='./services/upload/Dockerfile',
 							extra_tag='latest',
 							live_update=[
-								sync('./services/upload', '/usr/route'),
-								run('cd /usr/route && go build -v -o /usr/route'),
+								sync('./services/upload', '/home/nonroot/route'),
+								run('cd /home/nonroot/route && go build -v -o /home/nonroot/route'),
 								run('route')
 							]
 )
@@ -87,8 +87,8 @@ docker_build_with_restart('sthanguy/fc-projects',
 							dockerfile='./services/projects/Dockerfile',
 							extra_tag='latest',
 							live_update=[
-								sync('./services/projects', '/usr/route'),
-								run('cd /usr/route && go build -v -o /usr/route'),
+								sync('./services/projects', '/home/nonroot/route'),
+								run('cd /home/nonroot/route && go build -v -o /home/nonroot/route'),
 								run('route')
 							]
 )
@@ -111,8 +111,8 @@ docker_build_with_restart('sthanguy/fc-deploy',
 							entrypoint='go run main.go',
 							extra_tag='latest',
 							live_update=[
-								sync('./services/deploy', '/usr/route'),
-								run('cd /usr/route && go build -v -o /usr/route'),
+								sync('./services/deploy', '/home/nonroot/route'),
+								run('cd /home/nonroot/route && go build -v -o /home/nonroot/route'),
 								run('route')
 							]
 )
