@@ -21,6 +21,7 @@ type User struct {
 
 type UploadRequest struct {
 	RepoUrl string `json:"repo_url"`
+	ProjectId string `json:"project_id"`
 }
 
 type Env struct {
@@ -156,10 +157,11 @@ func main() {
 			builder,
 			bytes.NewReader([]byte(
 				fmt.Sprintf(
-					`{ "repo_name": "%s", "owner_name": "%s", "cookie": "%s" }`,
+					`{ "repo_name": "%s", "owner_name": "%s", "cookie": "%s", "project_id": "%s" }`,
 					ur.RepoUrl,
 					user.OwnerName,
 					cookie.Value,	
+					ur.ProjectId,
 				),
 			)),
 		)
