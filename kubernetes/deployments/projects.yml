@@ -22,11 +22,11 @@ spec:
             - containerPort: 3000
           volumeMounts:
             - name: firebase-secret
-              mountPath: "/usr/route/config/firebase"
+              mountPath: "/home/nonroot/route/config/firebase"
               readOnly: true
           env:
             - name: GOOGLE_APPLICATION_CREDENTIALS
-              value: "/usr/route/config/firebase/FIREBASE"
+              value: "/home/nonroot/route/config/firebase/FIREBASE"
       volumes:
         - name: firebase-secret
           secret:

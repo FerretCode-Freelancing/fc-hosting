@@ -22,10 +22,10 @@ spec:
             - containerPort: 3000
           volumeMounts:
             - name: stripe-auth-secret
-              mountPath: "/usr/route/config/stripe"
+              mountPath: "/home/nonroot/route/config/stripe"
               readOnly: true
             - name: firebase-secret
-              mountPath: "/usr/route/config/firebase"
+              mountPath: "/home/nonroot/route/config/firebase"
               readOnly: true
         - name: fc-logging
           image: sthanguy/fc-logging:latest
