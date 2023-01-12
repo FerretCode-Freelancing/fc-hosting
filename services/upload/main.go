@@ -87,7 +87,7 @@ func main() {
 		}
 
 		if res.StatusCode != 200 {
-			http.Error(w, "You are not authenticated!", http.StatusInternalServerError)
+			http.Error(w, "You are not authenticated!", http.StatusForbidden)
 
 			fmt.Println(err)
 

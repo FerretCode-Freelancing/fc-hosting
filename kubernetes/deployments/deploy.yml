@@ -14,6 +14,7 @@ spec:
       labels:
         app: fc-deploy
     spec:
+      serviceAccountName: fc-deploy
       containers:
         - name: fc-deploy
           image: sthanguy/fc-deploy:latest

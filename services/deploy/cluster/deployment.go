@@ -2,6 +2,7 @@ package cluster
 
 import (
 	"context"
+	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -113,26 +114,32 @@ func (d *Deployment) ApplyResources() error {
 		return err
 	}
 
+	fmt.Println("Authenticated")
+
 	// create resource definitions
 	namespace := d.CreateNamespace()
 	deployment := d.CreateDeployment()
 	service := d.CreateService()
 
+	fmt.Println("Schemas created")
+
 	// apply resources
 	_, namespaceCreateErr := client.CoreV1().Namespaces().Create(ctx, &namespace, v1.CreateOptions{})
 	if namespaceCreateErr != nil {
-		return err
+		return namespaceCreateErr
 	}
 
 	_, deploymentCreateErr := client.AppsV1().Deployments(d.NamespaceName).Create(ctx, &deployment, v1.CreateOptions{})
 	if deploymentCreateErr != nil {
-		return err
+		return deploymentCreateErr 
 	}
 
 	_, serviceCreateErr := client.CoreV1().Services(d.NamespaceName).Create(ctx, &service, v1.CreateOptions{})
 	if serviceCreateErr != nil {
-		return err
+		return serviceCreateErr
 	}
+
+	fmt.Println("Definitions created")
 
 	return nil
 }

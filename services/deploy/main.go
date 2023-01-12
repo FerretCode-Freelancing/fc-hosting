@@ -1,128 +1,108 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
+	"net"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/ferretcode-freelancing/fc-hosting/services/deploy/cluster"
+	"github.com/ferretcode-freelancing/fc-hosting/services/deploy/events"
+	"github.com/google/uuid"
+	"github.com/kubemq-io/kubemq-go"
 )
 
 type DeployRequest struct {
 	Ports []cluster.Ports `json:"ports"`
 	Env map[string]string `json:"env"`
+	ImageName string `json:"image_name"`
 }
-type Project struct {
-	ImageName string `json:"imageName"`
-}
+
 func main() {
-	r := chi.NewRouter()
+	ctx := context.Background()
 
-	r.Use(middleware.Logger)
-	r.Use(middleware.RealIP)
+	bus := events.Bus{
+		Channel: "deploy-pipeline",	
+		ClientId: uuid.NewString(),
+		Context: ctx,
+		TransportType: kubemq.TransportTypeGRPC,
+	}
 
-	r.Post("/deploy", func(w http.ResponseWriter, r *http.Request) {
-		client := &http.Client{}
+	fmt.Println(bus.ClientId)
 
-		projects := fmt.Sprintf(
-			"http://%s:%s",
-			os.Getenv("FC_PROJECTS_SERVICE_HOST"),
-			os.Getenv("FC_PROJECTS_SERVICE_PORT"),
-		)
+	client, err := bus.Connect()
 
-		projectId := r.URL.Query().Get("id")
+	if err != nil {
+		log.Fatal("There was an error connecting to the message bus.")
+	}
 
-		if projectId == "" {
-			http.Error(w, "You need to supply a project ID!", http.StatusBadRequest)
-
-			return
+	done, err := bus.Subscribe(client, func(msgs *kubemq.ReceiveQueueMessagesResponse, subscribeError error) {
+		if subscribeError != nil {
+			log.Printf("There was an error processing a message: %s\n", subscribeError.Error())
 		}
 
-		// fetch project to get imageName
-		req, err := http.NewRequest(
-			"GET",
-			fmt.Sprintf("%s/api/projects/get?id=%s", projects, projectId),
-			nil,
-		)
+		message := msgs.Messages[0]
+		request := &DeployRequest{}
+
+		projects, err := resolveService("fc-deploy.default.svc.cluster.local")
 
 		if err != nil {
-			http.Error(w, "There was an error fetching the supplied project.", http.StatusInternalServerError)
-
-			fmt.Println(err)
-
-			return
+			log.Printf("There was an error processing a message: %s\n", subscribeError.Error())
 		}
 
-		res, err := client.Do(req)
+		fmt.Println(projects)
 
-		if err != nil {
-			http.Error(w, "There was an error fetching the supplied project.", http.StatusInternalServerError)
-
-			fmt.Println(err)
-
-			return
-		}
-		
-		body, err := io.ReadAll(res.Body)
-
-		if err != nil {
-			http.Error(w, "There was an error deploying the supplied project.", http.StatusInternalServerError)
-
-			fmt.Println(err)
-
-			return	
-		}
-
-		var project Project
-
-		if err := json.Unmarshal(body, &project); err != nil {
-			http.Error(w, "There was an error deploying the supplied project.", http.StatusInternalServerError)
-
-			fmt.Println(err)
-
-			return
-		}
-
-		// begin deploy process by getting extra env variables or ports
-		var deployRequest DeployRequest
-
-		processErr := ProcessBody(&deployRequest, r) 
-
-		if processErr != nil {
-			http.Error(w, "There was an error deploying the supplied repository!", http.StatusInternalServerError)	
-
-			fmt.Println(err)
-
-			return
-		}
+		if err := json.Unmarshal(message.Body, &request); err != nil {
+			log.Printf("There was an error deploying a project: %s", err)
+		} 
 
 		deployment := cluster.Deployment{
-			ImageName: project.ImageName,
-			NamespaceName: project.ImageName,
+			ImageName: request.ImageName,
+			NamespaceName: request.ImageName,
 			Extras: cluster.Extras{
-				ImageName: project.ImageName,
+				ImageName: request.ImageName,
 			},
-			Ports: deployRequest.Ports,
-			Env: deployRequest.Env,
+			Ports: request.Ports,
+			Env: request.Env,
 		}
 
-		// apply resources to cluster
 		deployErr := deployment.ApplyResources()
 
 		if deployErr != nil {
-			http.Error(w, "There was an error deploying the supplied repository.", http.StatusInternalServerError)
-
-			fmt.Println(err)
-
-			return
+			fmt.Printf("There was an error applying resources: %s\n", deployErr)
 		}
 	})
 
-	http.ListenAndServe(":3000", r)
+	if err != nil {
+		log.Println("There was an error subscribing to the queue.")
+	}
+
+	var shutdown = make(chan os.Signal, 1)
+
+	signal.Notify(shutdown, syscall.SIGTERM)
+	signal.Notify(shutdown, syscall.SIGINT)
+	signal.Notify(shutdown, syscall.SIGQUIT)
+
+	select {
+	case <-shutdown:
+		done <- struct{}{}
+	}
+}
+
+func resolveService(host string) (string, error) {
+	ip, err := net.LookupIP(host)
+
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("http://%s:%s", ip[0].String(), "3000"), nil
 }
 
 // s is the struct to unmarshal the body into

@@ -86,6 +86,7 @@ docker_build_with_restart('sthanguy/fc-projects',
 							entrypoint='go run main.go',
 							dockerfile='./services/projects/Dockerfile',
 							extra_tag='latest',
+							ignore=['.kubemqctl.yaml'],
 							live_update=[
 								sync('./services/projects', '/home/nonroot/route'),
 								run('cd /home/nonroot/route && go build -v -o /home/nonroot/route'),
@@ -110,6 +111,7 @@ docker_build_with_restart('sthanguy/fc-deploy',
 							dockerfile='./services/deploy/Dockerfile',
 							entrypoint='go run main.go',
 							extra_tag='latest',
+							ignore=['.kubemqctl.yaml'],
 							live_update=[
 								sync('./services/deploy', '/home/nonroot/route'),
 								run('cd /home/nonroot/route && go build -v -o /home/nonroot/route'),
@@ -133,6 +135,8 @@ k8s_yaml(['kubernetes/services/auth.yml', 'kubernetes/services/gateway.yml', 'ku
 k8s_yaml(['kubernetes/pvc/registry.yml'])
 # ingress
 k8s_yaml(['kubernetes/ingress/gateway.yml'])
+# roles
+k8s_yaml(['kubernetes/roles/deploy.yml'])
 
 # Customize a Kubernetes resource
 #   By default, Kubernetes resource names are automatically assigned

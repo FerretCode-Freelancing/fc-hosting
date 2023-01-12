@@ -1,0 +1,26 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: fc-deploy
+rules:
+  - apiGroups: [""]
+    resources: ["namespaces", "deployments", "services"]
+    verbs: ["create", "get", "delete", "patch"]
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fc-deploy
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: deploy-binding
+subjects:
+  - kind: ServiceAccount
+    name: fc-deploy
+    namespace: default
+roleRef:
+  kind: ClusterRole
+  name: fc-deploy
+  apiGroup: rbac.authorization.k8s.io
