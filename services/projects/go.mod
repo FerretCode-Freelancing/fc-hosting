@@ -15,6 +15,7 @@ require (
 	firebase.google.com/go v3.13.0+incompatible // indirect
 	firebase.google.com/go/v4 v4.10.0 // indirect
 	github.com/MicahParks/keyfunc v1.6.0 // indirect
+	github.com/ferretcode-freelancing/fc-bus v0.1.0 // indirect
 	github.com/go-resty/resty/v2 v2.7.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v4 v4.4.3 // indirect
