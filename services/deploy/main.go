@@ -13,7 +13,7 @@ import (
 	"syscall"
 
 	"github.com/ferretcode-freelancing/fc-hosting/services/deploy/cluster"
-	"github.com/ferretcode-freelancing/fc-hosting/services/deploy/events"
+	"github.com/ferretcode-freelancing/fc-bus"
 	"github.com/google/uuid"
 	"github.com/kubemq-io/kubemq-go"
 )
