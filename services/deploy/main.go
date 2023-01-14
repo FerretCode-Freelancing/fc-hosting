@@ -22,6 +22,7 @@ type DeployRequest struct {
 	Ports []cluster.Ports `json:"ports"`
 	Env map[string]string `json:"env"`
 	ImageName string `json:"image_name"`
+	ProjectId string `json:"project_id"`
 }
 
 func main() {
@@ -64,7 +65,7 @@ func main() {
 
 		deployment := cluster.Deployment{
 			ImageName: request.ImageName,
-			NamespaceName: request.ImageName,
+			NamespaceName: request.ProjectId,
 			Extras: cluster.Extras{
 				ImageName: request.ImageName,
 			},
