@@ -58,6 +58,13 @@ func Get(w http.ResponseWriter, r *http.Request) {
 	data := dsnap.Data()
 
 	projectId := r.URL.Query().Get("id")
+
+	if projectId == "" {
+		http.Error(w, "The project ID needs to be set in the URL parameters.", http.StatusBadRequest)
+
+		return
+	}
+
 	stringified, err := json.Marshal(
 		data["projects"].(map[string]interface{})[projectId],
 	)

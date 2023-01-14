@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/ferretcode-freelancing/fc-hosting/projects/routes"
+	"github.com/ferretcode-freelancing/fc-hosting/projects/cache"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -14,8 +15,14 @@ func main() {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
 
+	cache := cache.NewCache()
+
 	r.Get("/api/projects/list", func(w http.ResponseWriter, r *http.Request) {
 		routes.List(w, r)
+	})
+
+	r.Get("/api/projects/status", func(w http.ResponseWriter, r *http.Request) {
+		routes.Status(w, r, cache)
 	})
 
 	r.Post("/api/projects/new", func(w http.ResponseWriter, r *http.Request) {
