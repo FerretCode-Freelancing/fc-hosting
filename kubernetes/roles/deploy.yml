@@ -3,9 +3,9 @@ kind: ClusterRole
 metadata:
   name: fc-deploy
 rules:
-  - apiGroups: [""]
+  - apiGroups: ["apps", ""]
     resources: ["namespaces", "deployments", "services"]
-    verbs: ["create", "get", "delete", "patch"]
+    verbs: ["create", "get", "delete", "list", "update"]
 ---
 apiVersion: v1
 kind: ServiceAccount

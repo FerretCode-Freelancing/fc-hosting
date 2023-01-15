@@ -3,6 +3,8 @@ package cluster
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -47,6 +49,8 @@ func (d *Deployment) CreateNamespace() corev1.Namespace {
 }
 
 func (d *Deployment) CreateDeployment() appsv1.Deployment {
+	fmt.Println(d.ImageName)
+
 	deployment := appsv1.Deployment{
 		ObjectMeta: v1.ObjectMeta{
 			Name: d.ImageName,
@@ -61,14 +65,19 @@ func (d *Deployment) CreateDeployment() appsv1.Deployment {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: v1.ObjectMeta{
 					Labels: map[string]string{
-						"app": d.ImageName,
+						"app": d.ImageName, 
 					},
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
 							Name: d.ImageName,
-							Image: d.ImageName,
+							Image: fmt.Sprintf(
+								"%s:%s/%s", 
+								strings.Trim(os.Getenv("FC_REGISTRY_SERVICE_HOST"), "\n"),
+								strings.Trim(os.Getenv("FC_REGISTRY_SERVICE_PORT"), "\n"),
+								d.ImageName,
+							),
 							Ports: d.Extras.Ports(d.Ports),
 							Env: d.Extras.Env(d.Env),
 						},
@@ -90,6 +99,7 @@ func (d *Deployment) CreateService() corev1.Service {
 			},
 		},
 		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeLoadBalancer,
 			Ports: []corev1.ServicePort{
 				{
 					Port: 3000,
@@ -123,23 +133,102 @@ func (d *Deployment) ApplyResources() error {
 
 	fmt.Println("Schemas created")
 
+	namespaceExists, err := d.CheckNamespace(namespace.Name, ctx, client)
+
+	if err != nil {
+		return err
+	}
+
+	serviceExists, err := d.CheckDeploymentAndService(deployment.Name, namespace.Name, ctx, client)
+
+	if err != nil {
+		return err
+	}
+
 	// apply resources
-	_, namespaceCreateErr := client.CoreV1().Namespaces().Create(ctx, &namespace, v1.CreateOptions{})
-	if namespaceCreateErr != nil {
-		return namespaceCreateErr
+	if !namespaceExists {
+		_, namespaceCreateErr := client.CoreV1().Namespaces().Create(ctx, &namespace, v1.CreateOptions{})
+		if namespaceCreateErr != nil {
+			return namespaceCreateErr
+		}
+	}
+	
+	if !serviceExists {
+		_, deploymentCreateErr := client.AppsV1().Deployments(d.NamespaceName).Create(ctx, &deployment, v1.CreateOptions{})
+		if deploymentCreateErr != nil {
+			return deploymentCreateErr 
+		}
+
+		_, serviceCreateErr := client.CoreV1().Services(d.NamespaceName).Create(ctx, &service, v1.CreateOptions{})
+		if serviceCreateErr != nil {
+			return serviceCreateErr
+		}
+
+		fmt.Println("Definitions created")
+
+		return nil
 	}
 
-	_, deploymentCreateErr := client.AppsV1().Deployments(d.NamespaceName).Create(ctx, &deployment, v1.CreateOptions{})
-	if deploymentCreateErr != nil {
-		return deploymentCreateErr 
+	_, deploymentUpdateErr := client.AppsV1().Deployments(d.NamespaceName).Update(ctx, &deployment, v1.UpdateOptions{})
+	if deploymentUpdateErr != nil {
+		return deploymentUpdateErr
 	}
 
-	_, serviceCreateErr := client.CoreV1().Services(d.NamespaceName).Create(ctx, &service, v1.CreateOptions{})
-	if serviceCreateErr != nil {
-		return serviceCreateErr
+	_, serviceUpdateErr := client.CoreV1().Services(d.NamespaceName).Update(ctx, &service, v1.UpdateOptions{})
+	if serviceUpdateErr != nil {
+		return serviceUpdateErr
 	}
-
-	fmt.Println("Definitions created")
 
 	return nil
+}
+
+func (d *Deployment) CheckDeploymentAndService(
+	name string,
+	namespace string,
+	ctx context.Context,
+	client kubernetes.Clientset,
+) (bool, error) {
+	deploymentList, err := client.AppsV1().Deployments(namespace).List(ctx, v1.ListOptions{})
+	serviceList, err := client.CoreV1().Services(namespace).List(ctx, v1.ListOptions{})
+
+	if err != nil {
+		return true, err
+	}
+
+	for _, deployment := range deploymentList.Items {
+		if deployment.Name == name {
+			return true, nil
+		}
+	}
+
+	for _, service := range serviceList.Items {
+		if service.Name == name {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+func (d *Deployment) CheckNamespace(
+	name string, 
+	ctx context.Context, 
+	client kubernetes.Clientset,
+) (bool, error) {
+	list, err := client.CoreV1().Namespaces().List(ctx, v1.ListOptions{})	
+
+	if err != nil {
+		return true, err
+	}
+
+	for _, namespace := range list.Items {
+		fmt.Println(namespace.Name)
+		fmt.Println(name)
+
+		if namespace.Name == name {
+			return true, nil
+		} 
+	}
+
+	return false, nil
 }

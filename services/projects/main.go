@@ -53,6 +53,8 @@ func main() {
 		routes.Update(w, r)
 	})
 
+	go http.ListenAndServe(":3000", r)
+
 	ctx := context.Background()
 
 	bus := events.Bus{
@@ -97,5 +99,4 @@ func main() {
 		done <- struct{}{}
 	}
 
-	http.ListenAndServe(":3000", r)
 }
