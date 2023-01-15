@@ -23,6 +23,7 @@ type DeployRequest struct {
 	Env map[string]string `json:"env"`
 	ImageName string `json:"image_name"`
 	ProjectId string `json:"project_id"`
+	Operation string `json:"operation"`
 }
 
 func main() {
@@ -46,39 +47,59 @@ func main() {
 	done, err := bus.Subscribe(client, func(msgs *kubemq.ReceiveQueueMessagesResponse, subscribeError error) {
 		if subscribeError != nil {
 			log.Printf("There was an error processing a message: %s\n", subscribeError.Error())
+
+			return
 		}
 
 		message := msgs.Messages[0]
 		request := &DeployRequest{}
 
-		projects, err := resolveService("fc-deploy.default.svc.cluster.local")
+		_, err := resolveService("fc-deploy.default.svc.cluster.local")
 
 		if err != nil {
 			log.Printf("There was an error processing a message: %s\n", subscribeError.Error())
-		}
 
-		fmt.Println(projects)
+			return
+		}
 
 		if err := json.Unmarshal(message.Body, &request); err != nil {
 			log.Printf("There was an error deploying a project: %s", err)
+
+			return
 		} 
 
-		deployment := cluster.Deployment{
-			ImageName: request.ImageName,
-			NamespaceName: request.ProjectId,
-			Extras: cluster.Extras{
+		if request.Operation == "create" {
+			deployment := cluster.Deployment{
 				ImageName: request.ImageName,
-			},
-			Ports: request.Ports,
-			Env: request.Env,
+				NamespaceName: request.ProjectId,
+				Extras: cluster.Extras{
+					ImageName: request.ImageName,
+				},
+				Ports: request.Ports,
+				Env: request.Env,
+			}
+
+			deployErr := deployment.ApplyResources()
+
+			if deployErr != nil {
+				fmt.Printf("There was an error applying resources: %s\n", deployErr)
+			}
+
+			return
 		}
 
-		deployErr := deployment.ApplyResources()
-
-		if deployErr != nil {
-			fmt.Printf("There was an error applying resources: %s\n", deployErr)
+		deletion := cluster.Deletion{
+			ProjectId: request.ProjectId,
 		}
-	})
+
+		deleteErr := deletion.DeleteEnvironment()
+
+		if deleteErr != nil {
+			log.Printf("There was an error deleting a project: %s", deleteErr)
+
+			return
+		}
+})
 
 	if err != nil {
 		log.Println("There was an error subscribing to the queue.")
