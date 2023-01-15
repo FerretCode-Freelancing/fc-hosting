@@ -23,6 +23,7 @@ type DeployRequest struct {
 	Env map[string]string `json:"env"`
 	ImageName string `json:"image_name"`
 	ProjectId string `json:"project_id"`
+	ServiceName string `json:"service_name"`
 	Operation string `json:"operation"`
 }
 
@@ -94,6 +95,20 @@ func main() {
 
 		deletion := cluster.Deletion{
 			ProjectId: request.ProjectId,
+		}
+
+		if len(request.ServiceName) > 0 {
+			deletion.ServiceName = request.ServiceName
+
+			deleteErr := deletion.DeleteService()
+
+			if deleteErr != nil {
+				log.Printf("There was an error deleting a project: %s", deleteErr)
+
+				return
+			}
+
+			return
 		}
 
 		deleteErr := deletion.DeleteEnvironment()

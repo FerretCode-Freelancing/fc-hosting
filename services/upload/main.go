@@ -27,6 +27,16 @@ type UploadRequest struct {
 	ProjectId string `json:"project_id"`
 }
 
+type DeleteRequest struct {
+	ProjectId string `json:"project_id"`
+}
+
+type DeleteMessage struct {
+	ServiceName string `json:"service_name"`
+	ProjectId string `json:"project_id"`
+	Operation string `json:"operation"`
+}
+
 type BuildMessage struct {
 	RepoUrl string `json:"repo_url"`
 	ProjectId string `json:"project_id"`	
@@ -64,21 +74,79 @@ func main() {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(60 * time.Second))
 
-	r.Post("/api/upload", func(w http.ResponseWriter, r *http.Request) {
-		user, cookie := Authenticate(w, r)
+	r.Delete("/api/upload/delete", func(w http.ResponseWriter, r *http.Request) {
+		Authenticate(w, r)
 
 		body, err := io.ReadAll(r.Body)
 
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, "There was an error deleting this resource!", http.StatusInternalServerError)
 
 			fmt.Println(err)
 
 			return
 		}
 
-		fmt.Println(string(body))
-	
+		dr := DeleteRequest{}
+
+		if err := json.Unmarshal(body, &dr); err != nil {
+			http.Error(w, "There was an error deleting this resource!", http.StatusInternalServerError)
+
+			fmt.Println(err)
+
+			return
+		}
+
+		serviceName := r.URL.Query().Get("service_name")
+
+		message := DeleteMessage{
+			ProjectId: dr.ProjectId,
+			Operation: "delete",
+		}
+
+		if len(serviceName) > 0 {
+			message.ServiceName = serviceName
+		}
+
+		stringified, err := json.Marshal(message)
+
+		if err != nil {
+			http.Error(w, "There was an error deleting the selected resource!", http.StatusInternalServerError)
+
+			fmt.Println(err)
+
+			return
+		}
+
+		_, sendErr := client.Send(ctx, kubemq.NewQueueMessage().
+			SetId(uuid.NewString()).
+			SetChannel("deploy-pipeline").
+			SetBody(stringified))
+
+		if sendErr != nil {
+			http.Error(w, "There was an error deleting the selected resource", http.StatusInternalServerError)
+
+			return
+		}
+
+		w.WriteHeader(202)
+		w.Write([]byte("Your repository was set to be deleted and will be deleted soon."))
+
+	})
+
+	r.Post("/api/upload", func(w http.ResponseWriter, r *http.Request) {
+		user, cookie := Authenticate(w, r)
+
+		body, err := io.ReadAll(r.Body)
+
+		if err != nil {
+			http.Error(w, "There was an error uploading your repository!", http.StatusInternalServerError)
+
+			fmt.Println(err)
+
+			return
+		}
+
 		ur := UploadRequest{}
 
 		if err := json.Unmarshal(body, &ur); err != nil {

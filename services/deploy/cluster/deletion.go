@@ -2,6 +2,7 @@ package cluster
 
 import (
 	"context"
+	"strings"
 
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -10,6 +11,7 @@ import (
 
 type Deletion struct {
 	ProjectId string
+	ServiceName string
 }
 
 func (d *Deletion) AuthenticateCluster() (kubernetes.Clientset, error) {
@@ -26,6 +28,32 @@ func (d *Deletion) AuthenticateCluster() (kubernetes.Clientset, error) {
 	}
 
 	return *client, nil
+}
+
+func (d *Deletion) DeleteService() error {
+	ctx := context.Background()
+
+	client, err := d.AuthenticateCluster()
+
+	if err != nil {
+		return err
+	}
+
+	serviceName := strings.ReplaceAll(d.ServiceName, "\"", "")
+
+	serviceDeleteErr := client.CoreV1().Services(d.ProjectId).Delete(ctx, serviceName, v1.DeleteOptions{})
+
+	if serviceDeleteErr != nil {
+		return serviceDeleteErr
+	}
+
+	deploymentDeleteErr := client.AppsV1().Deployments(d.ProjectId).Delete(ctx, serviceName, v1.DeleteOptions{})
+
+	if deploymentDeleteErr != nil {
+		return deploymentDeleteErr
+	}
+
+	return nil
 }
 
 func (d *Deletion) DeleteEnvironment() error {

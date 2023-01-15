@@ -102,7 +102,6 @@ docker_build_with_restart('sthanguy/fc-provision',
 							live_update=[
 								sync('../fc-provision', '/usr/src/provision'),
 								run('cd /usr/src/provision && go build -v -o /usr/local/bin/builder'),
-								run('builder')
 							]
 )
 
