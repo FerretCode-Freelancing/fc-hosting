@@ -44,6 +44,8 @@ func main() {
 		log.Fatal("There was an error connecting to the message bus.")
 	}
 
+	fmt.Println("Connected")
+
 	done, err := bus.Subscribe(client, func(msgs *kubemq.ReceiveQueueMessagesResponse, subscribeError error) {
 		if subscribeError != nil {
 			log.Printf("There was an error processing a message: %s\n", subscribeError.Error())
@@ -67,6 +69,8 @@ func main() {
 
 			return
 		} 
+
+		fmt.Println(request)
 
 		if request.Operation == "create" {
 			deployment := cluster.Deployment{
@@ -98,8 +102,8 @@ func main() {
 			log.Printf("There was an error deleting a project: %s", deleteErr)
 
 			return
-		}
-})
+    }
+	})
 
 	if err != nil {
 		log.Println("There was an error subscribing to the queue.")
