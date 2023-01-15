@@ -187,8 +187,8 @@ func main() {
 		defer res.Body.Close()
 
 		if resp.StatusCode == 200 {
-			w.WriteHeader(200)
-			w.Write([]byte("Your repository was deployed successfully!"))
+			w.WriteHeader(202)
+			w.Write([]byte("Your repository was upload successfully and is now building!"))
 		}
 	})
 
