@@ -1,17 +1,20 @@
 package main
 
 import (
-	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
+	events "github.com/ferretcode-freelancing/fc-bus"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/google/uuid"
+	"github.com/kubemq-io/kubemq-go"
 )
 
 type User struct {
@@ -24,11 +27,35 @@ type UploadRequest struct {
 	ProjectId string `json:"project_id"`
 }
 
+type BuildMessage struct {
+	RepoUrl string `json:"repo_url"`
+	ProjectId string `json:"project_id"`	
+	OwnerName string `json:"owner_name"`
+	Cookie string `json:"cookie"`
+}
+
 type Env struct {
 	Env string `json:"env"`
 }
 
 func main() {
+	ctx := context.Background()
+
+	bus := events.Bus{
+		Channel: "build-pipeline",
+		ClientId: uuid.NewString(),
+		Context: ctx,
+		TransportType: kubemq.TransportTypeGRPC,
+	}
+
+	client, err := bus.Connect()
+
+	if err != nil {
+		log.Fatalf("There was an error connecting to the message bus: %s\n", err)
+
+		return
+	}
+
 	r := chi.NewRouter()
 
 	r.Use(middleware.Logger)
@@ -38,73 +65,7 @@ func main() {
 	r.Use(middleware.Timeout(60 * time.Second))
 
 	r.Post("/api/upload", func(w http.ResponseWriter, r *http.Request) {
-		client := &http.Client{}
-
-		auth := fmt.Sprintf(
-			"http://%s:%s",
-			os.Getenv("FC_AUTH_SERVICE_HOST"),
-			os.Getenv("FC_AUTH_SERVICE_PORT"),
-		)
-
-		if r.Body == nil {
-			http.Error(w, "The body cannot be empty!", http.StatusBadRequest)
-
-			return
-		}
-
-		userReq, err := http.NewRequest("GET", fmt.Sprintf("%s/auth/github/user", auth), nil)
-
-		if err != nil {
-			http.Error(w, "Failed to validate auth!", http.StatusInternalServerError)
-
-			fmt.Println(err)
-
-			return
-		}
-
-		cookie, err := r.Cookie("fc-hosting")
-
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-
-			fmt.Println(err)
-
-			return
-		}
-
-		userReq.AddCookie(cookie)
-
-		userReq.Close = true
-
-		res, err := client.Do(userReq)
-
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-
-			fmt.Println(err)
-
-			return
-		}
-
-		if res.StatusCode != 200 {
-			http.Error(w, "You are not authenticated!", http.StatusForbidden)
-
-			fmt.Println(err)
-
-			return
-		}
-
-		defer res.Body.Close()
-
-		authBody, err := io.ReadAll(res.Body)
-
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-
-			fmt.Println(err)
-
-			return
-		}
+		user, cookie := Authenticate(w, r)
 
 		body, err := io.ReadAll(r.Body)
 
@@ -116,19 +77,9 @@ func main() {
 			return
 		}
 
-		var user User
-
-		if err := json.Unmarshal(authBody, &user); err != nil {
-			http.Error(w, "Failed to get the current user information!", http.StatusInternalServerError)
-
-			fmt.Println(err)
-
-			return
-		}
-
-		fmt.Println(user)
-
-		var ur UploadRequest
+		fmt.Println(string(body))
+	
+		ur := UploadRequest{}
 
 		if err := json.Unmarshal(body, &ur); err != nil {
 			http.Error(
@@ -142,55 +93,119 @@ func main() {
 			return
 		} 
 
-		fmt.Println(ur)
+		message := BuildMessage{
+			RepoUrl: ur.RepoUrl,
+			OwnerName: user.OwnerName,
+			ProjectId: ur.ProjectId,
+			Cookie: cookie,
+		}
 
-		builder := fmt.Sprintf(
-			"http://%s:%s@%s:%s/build",
-			strings.Trim(os.Getenv("FC_BUILDER_USERNAME"), "\n"),
-			strings.Trim(os.Getenv("FC_BUILDER_PASSWORD"), "\n"),
-			os.Getenv("FC_PROVISION_SERVICE_HOST"),
-			os.Getenv("FC_PROVISION_SERVICE_PORT"),
-		)
-		
-		req, err := http.NewRequest(
-			"POST",
-			builder,
-			bytes.NewReader([]byte(
-				fmt.Sprintf(
-					`{ "repo_name": "%s", "owner_name": "%s", "cookie": "%s", "project_id": "%s" }`,
-					ur.RepoUrl,
-					user.OwnerName,
-					cookie.Value,	
-					ur.ProjectId,
-				),
-			)),
-		)
+		fmt.Println(message)
+
+		stringified, err := json.Marshal(message)
 
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-
-			fmt.Println(err)
+			http.Error(w, "There was an error uploading your repository.", http.StatusInternalServerError)
 
 			return
 		}
 
-		resp, err := client.Do(req)
+		_, sendErr := client.Send(ctx, kubemq.NewQueueMessage().
+			SetId(uuid.NewString()).
+			SetChannel(bus.Channel).
+			SetBody(stringified))
 
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-
-			fmt.Println(err)
+		if sendErr != nil {
+			http.Error(w, "There was an error uploading your repository", http.StatusInternalServerError)
 
 			return
 		}
 
-		defer res.Body.Close()
-
-		if resp.StatusCode == 200 {
-			w.WriteHeader(202)
-			w.Write([]byte("Your repository was upload successfully and is now building!"))
-		}
+		w.WriteHeader(202)
+		w.Write([]byte("Your repository was uploaded successfully and is now building!"))
 	})
 
 	http.ListenAndServe(":3000", r)
+}
+
+func Authenticate(w http.ResponseWriter, r *http.Request) (User, string) {
+	client := &http.Client{}
+
+	auth := fmt.Sprintf(
+		"http://%s:%s",
+		os.Getenv("FC_AUTH_SERVICE_HOST"),
+		os.Getenv("FC_AUTH_SERVICE_PORT"),
+	)
+
+	if r.Body == nil {
+		http.Error(w, "The body cannot be empty!", http.StatusBadRequest)
+
+		return User{}, ""
+	}
+
+	userReq, err := http.NewRequest("GET", fmt.Sprintf("%s/auth/github/user", auth), nil)
+
+	if err != nil {
+		http.Error(w, "Failed to validate auth!", http.StatusInternalServerError)
+
+		fmt.Println(err)
+
+		return User{}, ""
+	}
+
+	cookie, err := r.Cookie("fc-hosting")
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+		fmt.Println(err)
+
+		return User{}, ""
+	}
+
+	userReq.AddCookie(cookie)
+
+	userReq.Close = true
+
+	res, err := client.Do(userReq)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+		fmt.Println(err)
+
+		return User{}, ""
+	}
+
+	if res.StatusCode != 200 {
+		http.Error(w, "You are not authenticated!", http.StatusForbidden)
+
+		fmt.Println(err)
+
+		return User{}, ""
+	}
+
+	defer res.Body.Close()
+
+	authBody, err := io.ReadAll(res.Body)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+		fmt.Println(err)
+
+		return User{}, ""
+	}
+
+	var user User
+
+	if err := json.Unmarshal(authBody, &user); err != nil {
+		http.Error(w, "Failed to get the current user information!", http.StatusInternalServerError)
+
+		fmt.Println(err)
+
+		return User{}, ""
+	}
+
+	return user, cookie.Value 
 }
