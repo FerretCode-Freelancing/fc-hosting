@@ -17,7 +17,7 @@ jobs:
         run: echo ${{ secrets.DOCKER_HUB_PASSWORD }} | docker login --username ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
 
       - name: Build the Auth microservice
-        run: | 
+        run: |
           docker build ./services/auth --tag "sthanguy/fc-auth:$GITHUB_SHA"
           docker push "sthanguy/fc-auth:$GITHUB_SHA"
 
@@ -40,6 +40,11 @@ jobs:
         run: |
           docker build ./services/gateway --tag "sthanguy/fc-upload:$GITHUB_SHA"
           docker push "sthanguy/fc-upload:$GITHUB_SHA"
+
+      - name: Build the Projects microservice
+        run: |
+          docker build ./services/projects --tag "sthanguy/fc-projects:$GITHUB_SHA"
+          docker push "sthanguy/fc-projects:$GITHUB_SHA"
 
       - name: Build the Logging sidecar
         run: |
