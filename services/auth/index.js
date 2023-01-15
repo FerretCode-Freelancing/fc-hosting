@@ -91,7 +91,7 @@ app.get("/auth/github/user", async (req, res) => {
 app.get("/auth/github", (_, res) => {
   const url = `https://github.com/login/oauth/authorize?client_id=${readSecret(
     "./config/gh/id"
-  )}&scope=public_repo,read:user,user:email&redirect_uri=http://localhost:1337/auth/github/callback`;
+  )}&scope=repo,read:user,user:email&redirect_uri=http://localhost:1337/auth/github/callback`;
 
   res.redirect(url);
 });

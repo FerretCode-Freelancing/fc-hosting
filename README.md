@@ -9,23 +9,22 @@
 
 ## Who it's for 🧑
 
-FerretCode Hosting is for people who want to host small applications or projects at a cheap price
+FerretCode Hosting is for people who want to host small to medium size applications or projects at a cheap price
 
 ## How it works 📝
 
 1. Choose your GitHub repository
-2. Paste your environment variables
-3. Make a name for your app
-4. Wait for deployment
-5. And you're done!
+2. Add your environment variables
+3. Wait for deployment
+4. And you're done!
 
 ## Pricing 💵
 
 Pricing is subject to change.
 
-- <500kb size: $1/month
-- <1mb size: $2/month
-- <5mb size: $5/month
+- <500kb size: $1/environment/month
+- <1mb size: $2/environment/month
+- <5mb size: $5/environment/month
 - For project sizes >5mb please contact me for custom pricing.
 
 ## Support 📧
