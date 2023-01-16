@@ -8,6 +8,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networking "k8s.io/api/networking/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -49,7 +50,7 @@ func (d *Deployment) CreateNamespace() corev1.Namespace {
 }
 
 func (d *Deployment) CreateDeployment() appsv1.Deployment {
-	fmt.Println(d.ImageName)
+	fmt.Println(d.Ports)
 
 	deployment := appsv1.Deployment{
 		ObjectMeta: v1.ObjectMeta{
@@ -99,13 +100,8 @@ func (d *Deployment) CreateService() corev1.Service {
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Type: corev1.ServiceTypeLoadBalancer,
-			Ports: []corev1.ServicePort{
-				{
-					Port: 3000,
-					Protocol: corev1.ProtocolTCP,
-				},
-			},
+			Type: corev1.ServiceTypeClusterIP,
+			Ports: d.Extras.ServicePorts(d.Ports), 
 			Selector: map[string]string{
 				"app": d.ImageName,
 			},
@@ -113,6 +109,47 @@ func (d *Deployment) CreateService() corev1.Service {
 	}
 
 	return service
+}
+
+func (d *Deployment) CreateIngress(port int32) networking.Ingress {
+	pathType := networking.PathType("Prefix")
+
+	paths := networking.HTTPIngressPath{
+		Path: fmt.Sprintf("/%s/%s/",	d.NamespaceName, d.ImageName),
+		PathType: &pathType,
+		Backend: networking.IngressBackend{
+			Service: &networking.IngressServiceBackend{
+				Name: d.ImageName,
+				Port: networking.ServiceBackendPort{
+					Number: port,
+				},
+			},
+		},
+	}
+
+	ruleValue := networking.IngressRuleValue{
+		HTTP: &networking.HTTPIngressRuleValue{
+			Paths: []networking.HTTPIngressPath{paths},
+		},
+	}
+
+	rules := networking.IngressRule{
+		IngressRuleValue: ruleValue,
+	}
+
+	ingress := networking.Ingress{
+		ObjectMeta: v1.ObjectMeta{
+			Name: d.ImageName,
+			Labels: map[string]string{
+				"run": d.ImageName,
+			},
+		},
+		Spec: networking.IngressSpec{
+			Rules: []networking.IngressRule{rules},
+		},
+	}
+
+	return ingress
 }
 
 func (d *Deployment) ApplyResources() error {
@@ -124,14 +161,11 @@ func (d *Deployment) ApplyResources() error {
 		return err
 	}
 
-	fmt.Println("Authenticated")
-
 	// create resource definitions
 	namespace := d.CreateNamespace()
 	deployment := d.CreateDeployment()
 	service := d.CreateService()
-
-	fmt.Println("Schemas created")
+	ingress := d.CreateIngress(int32(d.Ports[0].ContainerPort))
 
 	namespaceExists, err := d.CheckNamespace(namespace.Name, ctx, client)
 
@@ -164,7 +198,10 @@ func (d *Deployment) ApplyResources() error {
 			return serviceCreateErr
 		}
 
-		fmt.Println("Definitions created")
+		_, ingressCreateErr := client.NetworkingV1().Ingresses(d.NamespaceName).Create(ctx, &ingress, v1.CreateOptions{})
+		if ingressCreateErr != nil {
+			return ingressCreateErr
+		}
 
 		return nil
 	}
@@ -177,6 +214,11 @@ func (d *Deployment) ApplyResources() error {
 	_, serviceUpdateErr := client.CoreV1().Services(d.NamespaceName).Update(ctx, &service, v1.UpdateOptions{})
 	if serviceUpdateErr != nil {
 		return serviceUpdateErr
+	}
+
+	_, ingressUpdateErr := client.NetworkingV1().Ingresses(d.NamespaceName).Update(ctx, &ingress, v1.UpdateOptions{})
+	if ingressUpdateErr != nil {
+		return ingressUpdateErr
 	}
 
 	return nil
@@ -222,9 +264,6 @@ func (d *Deployment) CheckNamespace(
 	}
 
 	for _, namespace := range list.Items {
-		fmt.Println(namespace.Name)
-		fmt.Println(name)
-
 		if namespace.Name == name {
 			return true, nil
 		} 

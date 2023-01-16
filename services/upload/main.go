@@ -25,6 +25,8 @@ type User struct {
 type UploadRequest struct {
 	RepoUrl string `json:"repo_url"`
 	ProjectId string `json:"project_id"`
+	Ports []Port `json:"ports"`
+	Env map[string]string `json:"env"`
 }
 
 type DeleteRequest struct {
@@ -42,10 +44,13 @@ type BuildMessage struct {
 	ProjectId string `json:"project_id"`	
 	OwnerName string `json:"owner_name"`
 	Cookie string `json:"cookie"`
+	Ports []Port `json:"ports"`
+	Env map[string]string `json:"env"`
 }
 
-type Env struct {
-	Env string `json:"env"`
+type Port struct {
+	ContainerPort int `json:"container_port"`
+	Name string `json:"name"`
 }
 
 func main() {
@@ -135,7 +140,11 @@ func main() {
 	})
 
 	r.Post("/api/upload", func(w http.ResponseWriter, r *http.Request) {
-		user, cookie := Authenticate(w, r)
+		user, cookie, ok := Authenticate(w, r)
+
+		if !ok {
+			return
+		}
 
 		body, err := io.ReadAll(r.Body)
 
@@ -166,6 +175,8 @@ func main() {
 			OwnerName: user.OwnerName,
 			ProjectId: ur.ProjectId,
 			Cookie: cookie,
+			Ports: ur.Ports,
+			Env: ur.Env,
 		}
 
 		fmt.Println(message)
@@ -196,7 +207,7 @@ func main() {
 	http.ListenAndServe(":3000", r)
 }
 
-func Authenticate(w http.ResponseWriter, r *http.Request) (User, string) {
+func Authenticate(w http.ResponseWriter, r *http.Request) (User, string, bool) {
 	client := &http.Client{}
 
 	auth := fmt.Sprintf(
@@ -208,7 +219,7 @@ func Authenticate(w http.ResponseWriter, r *http.Request) (User, string) {
 	if r.Body == nil {
 		http.Error(w, "The body cannot be empty!", http.StatusBadRequest)
 
-		return User{}, ""
+		return User{}, "", false
 	}
 
 	userReq, err := http.NewRequest("GET", fmt.Sprintf("%s/auth/github/user", auth), nil)
@@ -218,7 +229,7 @@ func Authenticate(w http.ResponseWriter, r *http.Request) (User, string) {
 
 		fmt.Println(err)
 
-		return User{}, ""
+		return User{}, "", false
 	}
 
 	cookie, err := r.Cookie("fc-hosting")
@@ -228,7 +239,7 @@ func Authenticate(w http.ResponseWriter, r *http.Request) (User, string) {
 
 		fmt.Println(err)
 
-		return User{}, ""
+		return User{}, "", false
 	}
 
 	userReq.AddCookie(cookie)
@@ -242,7 +253,7 @@ func Authenticate(w http.ResponseWriter, r *http.Request) (User, string) {
 
 		fmt.Println(err)
 
-		return User{}, ""
+		return User{}, "", false
 	}
 
 	if res.StatusCode != 200 {
@@ -250,7 +261,7 @@ func Authenticate(w http.ResponseWriter, r *http.Request) (User, string) {
 
 		fmt.Println(err)
 
-		return User{}, ""
+		return User{}, "", false
 	}
 
 	defer res.Body.Close()
@@ -262,7 +273,7 @@ func Authenticate(w http.ResponseWriter, r *http.Request) (User, string) {
 
 		fmt.Println(err)
 
-		return User{}, ""
+		return User{}, "", false
 	}
 
 	var user User
@@ -272,8 +283,8 @@ func Authenticate(w http.ResponseWriter, r *http.Request) (User, string) {
 
 		fmt.Println(err)
 
-		return User{}, ""
+		return User{}, "", false
 	}
 
-	return user, cookie.Value 
+	return user, cookie.Value, true 
 }

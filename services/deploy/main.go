@@ -84,6 +84,8 @@ func main() {
 				Env: request.Env,
 			}
 
+			fmt.Println(request.Ports)
+
 			deployErr := deployment.ApplyResources()
 
 			if deployErr != nil {

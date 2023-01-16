@@ -3,8 +3,13 @@ kind: Ingress
 metadata:
   name: gateway
 spec:
-  defaultBackend:
-    service:
-      name: fc-gateway
-      port:
-        number: 1337
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: fc-gateway
+                port:
+                  number: 1337

@@ -3,8 +3,8 @@ kind: ClusterRole
 metadata:
   name: fc-deploy
 rules:
-  - apiGroups: ["apps", ""]
-    resources: ["namespaces", "deployments", "services"]
+  - apiGroups: ["apps", "", "networking.k8s.io"]
+    resources: ["namespaces", "deployments", "services", "ingresses"]
     verbs: ["create", "get", "delete", "list", "update"]
 ---
 apiVersion: v1
