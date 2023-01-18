@@ -53,8 +53,8 @@ func New(w http.ResponseWriter, r *http.Request) {
 	res, err := dsnap.Set(ctx, map[string]interface{}{
 		"projects": map[string]interface{}{
 			uuid.New().String(): map[string]interface{}{
-				"name":           name,
-				"subscriptionId": "",
+				"name":            name,
+				"subscription_id": "",
 			},
 		},
 	}, firestore.MergeAll)
