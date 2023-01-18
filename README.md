@@ -22,10 +22,10 @@ FerretCode Hosting is for people who want to host small to medium size applicati
 
 Pricing is subject to change.
 
-- <500kb size: $1/environment/month
-- <1mb size: $2/environment/month
-- <5mb size: $5/environment/month
-- For project sizes >5mb please contact me for custom pricing.
+- 100mb RAM: $1/environment/month
+- 250mb RAM: $2/environment/month
+- 500mb RAM: $5/environment/month
+- For project sizes >500mb RAM please contact me for custom pricing.
 
 ## Support 📧
 
