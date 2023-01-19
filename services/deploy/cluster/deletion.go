@@ -41,16 +41,22 @@ func (d *Deletion) DeleteService() error {
 
 	serviceName := strings.ReplaceAll(d.ServiceName, "\"", "")
 
+	deploymentDeleteErr := client.AppsV1().Deployments(d.ProjectId).Delete(ctx, serviceName, v1.DeleteOptions{})
+
+	if deploymentDeleteErr != nil {
+		return deploymentDeleteErr
+	}
+
 	serviceDeleteErr := client.CoreV1().Services(d.ProjectId).Delete(ctx, serviceName, v1.DeleteOptions{})
 
 	if serviceDeleteErr != nil {
 		return serviceDeleteErr
 	}
 
-	deploymentDeleteErr := client.AppsV1().Deployments(d.ProjectId).Delete(ctx, serviceName, v1.DeleteOptions{})
+	ingressDeleteErr := client.NetworkingV1().Ingresses(d.ProjectId).Delete(ctx, serviceName, v1.DeleteOptions{})
 
-	if deploymentDeleteErr != nil {
-		return deploymentDeleteErr
+	if ingressDeleteErr != nil {
+		return ingressDeleteErr
 	}
 
 	return nil

@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
+	rbac "k8s.io/api/rbac/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/utils/pointer"
@@ -47,6 +50,49 @@ func (d *Deployment) CreateNamespace() corev1.Namespace {
 	}
 
 	return namespace
+}
+
+func (d *Deployment) DeployStatus() appsv1.Deployment {
+	deployment := appsv1.Deployment{
+		ObjectMeta: v1.ObjectMeta{
+			Name: "fc-status",
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: pointer.Int32(1),
+			Selector: &v1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "fc-status",
+				},
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: v1.ObjectMeta{
+					Labels: map[string]string{
+						"app": "fc-status",
+					},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name: "fc-status",
+							Image: "sthanguy/fc-status", 
+							Env: []corev1.EnvVar{
+								{
+									Name: "POD_NAMESPACE",
+									ValueFrom: &corev1.EnvVarSource{
+										FieldRef: &corev1.ObjectFieldSelector{
+											FieldPath: "metadata.namespace",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	return deployment
 }
 
 func (d *Deployment) CreateDeployment() appsv1.Deployment {
@@ -100,7 +146,7 @@ func (d *Deployment) CreateService() corev1.Service {
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Type: corev1.ServiceTypeClusterIP,
+			Type: corev1.ServiceTypeNodePort,
 			Ports: d.Extras.ServicePorts(d.Ports), 
 			Selector: map[string]string{
 				"app": d.ImageName,
@@ -143,6 +189,9 @@ func (d *Deployment) CreateIngress(port int32) networking.Ingress {
 			Labels: map[string]string{
 				"run": d.ImageName,
 			},
+			Annotations: map[string]string{
+				"ingress.kubernetes.io/ssl-redirect": "false",
+			},
 		},
 		Spec: networking.IngressSpec{
 			Rules: []networking.IngressRule{rules},
@@ -151,6 +200,43 @@ func (d *Deployment) CreateIngress(port int32) networking.Ingress {
 
 	return ingress
 }
+
+func (d *Deployment) CreateRole() (rbac.Role, rbac.RoleBinding) {
+	rule := rbac.PolicyRule{
+		APIGroups: []string{""},
+		Resources: []string{"pods"},
+		Verbs: []string{"list"},
+	}
+
+	role := rbac.Role{
+		ObjectMeta: v1.ObjectMeta{
+			Name: fmt.Sprintf("%s-status", d.NamespaceName),
+			Namespace: d.NamespaceName,
+		},
+		Rules: []rbac.PolicyRule{rule},
+	}
+
+	subject := rbac.Subject{
+		Kind: "ServiceAccount",
+		Name: "fc-status",
+		Namespace: d.NamespaceName,
+	}
+
+	roleBinding := rbac.RoleBinding{
+		ObjectMeta: v1.ObjectMeta{
+			Name: fmt.Sprintf("%s-status", d.NamespaceName),
+			Namespace: d.NamespaceName,
+		},
+		Subjects: []rbac.Subject{subject},
+		RoleRef: rbac.RoleRef{
+			Kind: "Role",
+			Name: fmt.Sprintf("%s-status", d.NamespaceName),
+			APIGroup: "rbac.authorization.k8s.io",
+		},
+	}
+
+	return role, roleBinding
+} 
 
 func (d *Deployment) ApplyResources() error {
 	ctx := context.Background()
@@ -164,8 +250,6 @@ func (d *Deployment) ApplyResources() error {
 	// create resource definitions
 	namespace := d.CreateNamespace()
 	deployment := d.CreateDeployment()
-	service := d.CreateService()
-	ingress := d.CreateIngress(int32(d.Ports[0].ContainerPort))
 
 	namespaceExists, err := d.CheckNamespace(namespace.Name, ctx, client)
 
@@ -179,32 +263,40 @@ func (d *Deployment) ApplyResources() error {
 		return err
 	}
 
+	// this is despicable
+
 	// apply resources
 	if !namespaceExists {
-		_, namespaceCreateErr := client.CoreV1().Namespaces().Create(ctx, &namespace, v1.CreateOptions{})
-		if namespaceCreateErr != nil {
-			return namespaceCreateErr
+		err := d.CreateProjectResources(client, ctx)
+
+		if err != nil {
+			return err
 		}
 	}
 	
 	if !serviceExists {
-		_, deploymentCreateErr := client.AppsV1().Deployments(d.NamespaceName).Create(ctx, &deployment, v1.CreateOptions{})
-		if deploymentCreateErr != nil {
-			return deploymentCreateErr 
-		}
+		err := d.CreateProjectResources(client, ctx)
 
-		_, serviceCreateErr := client.CoreV1().Services(d.NamespaceName).Create(ctx, &service, v1.CreateOptions{})
-		if serviceCreateErr != nil {
-			return serviceCreateErr
-		}
-
-		_, ingressCreateErr := client.NetworkingV1().Ingresses(d.NamespaceName).Create(ctx, &ingress, v1.CreateOptions{})
-		if ingressCreateErr != nil {
-			return ingressCreateErr
+		if err != nil {
+			return err 
 		}
 
 		return nil
 	}
+
+	updateErr := d.UpdateProjectService(client, ctx)
+
+	if updateErr != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d *Deployment) UpdateProjectService(client kubernetes.Clientset, ctx context.Context) error {
+	deployment := d.CreateDeployment()
+	service := d.CreateService()
+	ingress := d.CreateIngress(int32(d.Ports[0].ContainerPort))
 
 	_, deploymentUpdateErr := client.AppsV1().Deployments(d.NamespaceName).Update(ctx, &deployment, v1.UpdateOptions{})
 	if deploymentUpdateErr != nil {
@@ -220,6 +312,69 @@ func (d *Deployment) ApplyResources() error {
 	if ingressUpdateErr != nil {
 		return ingressUpdateErr
 	}
+
+	patch := fmt.Sprintf(`{"spec": {
+		"template": {"metadata": {
+			"annotations": {
+				"kubectl.kubernetes.io/restartedAt": "%s"
+			}
+		}}
+	}}`, time.Now().Format(time.RFC3339))
+
+	client.AppsV1().Deployments(d.NamespaceName).Patch(ctx, deployment.Name, types.StrategicMergePatchType, []byte(patch), v1.PatchOptions{})
+
+	return nil
+
+}
+
+func (d *Deployment) CreateProjectService(client kubernetes.Clientset, ctx context.Context) error {
+	deployment := d.CreateDeployment()
+	service := d.CreateService()
+	ingress := d.CreateIngress(int32(d.Ports[0].ContainerPort))
+
+	_, deploymentCreateErr := client.AppsV1().Deployments(d.NamespaceName).Create(ctx, &deployment, v1.CreateOptions{})
+	if deploymentCreateErr != nil {
+		return deploymentCreateErr 
+	}
+
+	_, serviceCreateErr := client.CoreV1().Services(d.NamespaceName).Create(ctx, &service, v1.CreateOptions{})
+	if serviceCreateErr != nil {
+		return serviceCreateErr
+	}
+
+	_, ingressCreateErr := client.NetworkingV1().Ingresses(d.NamespaceName).Create(ctx, &ingress, v1.CreateOptions{})
+	if ingressCreateErr != nil {
+		return ingressCreateErr
+	}
+
+	return nil
+}
+
+func (d *Deployment) CreateProjectResources(client kubernetes.Clientset, ctx context.Context) error {
+	namespace := d.CreateNamespace()
+	role, roleBinding := d.CreateRole()
+	statusDeployment := d.DeployStatus()
+
+	_, namespaceCreateErr := client.CoreV1().Namespaces().Create(ctx, &namespace, v1.CreateOptions{})
+	if namespaceCreateErr != nil {
+		return namespaceCreateErr
+	}
+
+	_, roleCreateErr := client.RbacV1().Roles(d.NamespaceName).Create(ctx, &role, v1.CreateOptions{})
+	if roleCreateErr != nil {
+		return roleCreateErr
+	} 
+
+	_, roleBindingCreateErr := client.RbacV1().RoleBindings(d.NamespaceName).Create(ctx, &roleBinding, v1.CreateOptions{})
+	if roleBindingCreateErr != nil {
+		return roleBindingCreateErr
+	}
+
+	_, statusCreateErr := client.AppsV1().Deployments(d.NamespaceName).Create(ctx, &statusDeployment, v1.CreateOptions{})
+	if statusCreateErr != nil {
+		return statusCreateErr
+	}
+
 
 	return nil
 }
