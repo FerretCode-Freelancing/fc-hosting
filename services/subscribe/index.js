@@ -31,11 +31,25 @@ app.get("/api/subscribe/success", async (req, res) => {
 
       const json = await owner.json();
 
+      let limit;
+      switch (subscription.items.data[0].unit_amount) {
+        case 100:
+          limit = 100;
+          break;
+        case 200:
+          limit = 250;
+          break;
+        case 500:
+          limit = 500;
+          break;
+      }
+
       firestore.updateDoc(
         {
           projects: {
             [projectId]: {
-              subscriptionId: session.subscription,
+              subscription_id: session.subscription,
+              ram_limit: limit,
             },
           },
         },
