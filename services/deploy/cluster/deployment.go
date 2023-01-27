@@ -24,6 +24,7 @@ type Deployment struct {
 	Extras Extras
 	Ports []Ports
 	Env map[string]string
+  RamLimit string
 }
 
 func (d *Deployment) AuthenticateCluster() (kubernetes.Clientset, error) {
