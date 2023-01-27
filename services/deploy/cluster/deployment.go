@@ -425,7 +425,12 @@ func (d *Deployment) CheckDeploymentAndService(
 	ctx context.Context,
 	client kubernetes.Clientset,
 ) (bool, error) {
-	deploymentList, err := client.AppsV1().Deployments(namespace).List(ctx, v1.ListOptions{})
+	deploymentList, deploymentListErr := client.AppsV1().Deployments(namespace).List(ctx, v1.ListOptions{})
+
+	if deploymentListErr != nil {
+		return true, deploymentListErr
+	}
+
 	serviceList, err := client.CoreV1().Services(namespace).List(ctx, v1.ListOptions{})
 
 	if err != nil {
