@@ -25,6 +25,7 @@ type DeployRequest struct {
 	ProjectId string `json:"project_id"`
 	ServiceName string `json:"service_name"`
 	Operation string `json:"operation"`
+  RamLimit string `json:"ram_limit"`
 }
 
 func main() {
@@ -82,6 +83,7 @@ func main() {
 				},
 				Ports: request.Ports,
 				Env: request.Env,
+        RamLimit: request.RamLimit,
 			}
 
 			fmt.Println(request.Ports)
