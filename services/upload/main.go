@@ -11,6 +11,7 @@ import (
 	"time"
 
 	events "github.com/ferretcode-freelancing/fc-bus"
+	"github.com/ferretcode-freelancing/upload/projects"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
@@ -46,6 +47,7 @@ type BuildMessage struct {
 	Cookie    string            `json:"cookie"`
 	Ports     []Port            `json:"ports"`
 	Env       map[string]string `json:"env"`
+	RamLimit  string            `json:"ram_limit"`
 }
 
 type Port struct {
@@ -80,7 +82,11 @@ func main() {
 	r.Use(middleware.Timeout(60 * time.Second))
 
 	r.Delete("/api/upload/delete", func(w http.ResponseWriter, r *http.Request) {
-		Authenticate(w, r)
+		_, _, ok := Authenticate(w, r)
+
+		if !ok {
+			return
+		}
 
 		body, err := io.ReadAll(r.Body)
 
@@ -166,6 +172,22 @@ func main() {
 			)
 
 			fmt.Println(err)
+
+			return
+		}
+
+		project, err := projects.GetProject(ur.ProjectId)
+
+		if err != nil {
+			http.Error(w, "Failed to validate your subscription!", http.StatusInternalServerError)
+
+			fmt.Println(err)
+
+			return
+		}
+
+		if project.SubscriptionId == "" {
+			http.Error(w, "You do not have an active subscription!", http.StatusForbidden)
 
 			return
 		}

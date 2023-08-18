@@ -11,6 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networking "k8s.io/api/networking/v1"
 	rbac "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -19,11 +20,12 @@ import (
 )
 
 type Deployment struct {
-	ImageName string
+	ImageName     string
 	NamespaceName string
-	Extras Extras
-	Ports []Ports
-	Env map[string]string
+	Extras        Extras
+	Ports         []Ports
+	Env           map[string]string
+	RamLimit      string
 }
 
 func (d *Deployment) AuthenticateCluster() (kubernetes.Clientset, error) {
@@ -52,6 +54,35 @@ func (d *Deployment) CreateNamespace() corev1.Namespace {
 	return namespace
 }
 
+func (d *Deployment) CreateResourceQuota() (corev1.ResourceQuota, error) {
+	cpuLimit, err := resource.ParseQuantity("1")
+
+	if err != nil {
+		return corev1.ResourceQuota{}, err
+	}
+
+	ramLimit, err := resource.ParseQuantity(d.RamLimit)
+
+	if err != nil {
+		return corev1.ResourceQuota{}, err
+	}
+
+	resourceQuota := corev1.ResourceQuota{
+		ObjectMeta: v1.ObjectMeta{
+			Name:      d.NamespaceName,
+			Namespace: d.NamespaceName,
+		},
+		Spec: corev1.ResourceQuotaSpec{
+			Hard: corev1.ResourceList{
+				corev1.ResourceLimitsCPU:    cpuLimit,
+				corev1.ResourceLimitsMemory: ramLimit,
+			},
+		},
+	}
+
+	return resourceQuota, nil
+}
+
 func (d *Deployment) DeployStatus() appsv1.Deployment {
 	deployment := appsv1.Deployment{
 		ObjectMeta: v1.ObjectMeta{
@@ -73,8 +104,8 @@ func (d *Deployment) DeployStatus() appsv1.Deployment {
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name: "fc-status",
-							Image: "sthanguy/fc-status", 
+							Name:  "fc-status",
+							Image: "sthanguy/fc-status",
 							Env: []corev1.EnvVar{
 								{
 									Name: "POD_NAMESPACE",
@@ -112,7 +143,7 @@ func (d *Deployment) CreateDeployment() appsv1.Deployment {
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: v1.ObjectMeta{
 					Labels: map[string]string{
-						"app": d.ImageName, 
+						"app": d.ImageName,
 					},
 				},
 				Spec: corev1.PodSpec{
@@ -120,22 +151,22 @@ func (d *Deployment) CreateDeployment() appsv1.Deployment {
 						{
 							Name: d.ImageName,
 							Image: fmt.Sprintf(
-								"%s:%s/%s", 
+								"%s:%s/%s",
 								strings.Trim(os.Getenv("FC_REGISTRY_SERVICE_HOST"), "\n"),
 								strings.Trim(os.Getenv("FC_REGISTRY_SERVICE_PORT"), "\n"),
 								d.ImageName,
 							),
 							Ports: d.Extras.Ports(d.Ports),
-							Env: d.Extras.Env(d.Env),
+							Env:   d.Extras.Env(d.Env),
 						},
 					},
 				},
 			},
 		},
-	}	
+	}
 
 	return deployment
-} 
+}
 
 func (d *Deployment) CreateService() corev1.Service {
 	service := corev1.Service{
@@ -146,8 +177,8 @@ func (d *Deployment) CreateService() corev1.Service {
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Type: corev1.ServiceTypeNodePort,
-			Ports: d.Extras.ServicePorts(d.Ports), 
+			Type:  corev1.ServiceTypeNodePort,
+			Ports: d.Extras.ServicePorts(d.Ports),
 			Selector: map[string]string{
 				"app": d.ImageName,
 			},
@@ -161,7 +192,7 @@ func (d *Deployment) CreateIngress(port int32) networking.Ingress {
 	pathType := networking.PathType("Prefix")
 
 	paths := networking.HTTPIngressPath{
-		Path: fmt.Sprintf("/%s/%s/",	d.NamespaceName, d.ImageName),
+		Path:     fmt.Sprintf("/%s/%s/", d.NamespaceName, d.ImageName),
 		PathType: &pathType,
 		Backend: networking.IngressBackend{
 			Service: &networking.IngressServiceBackend{
@@ -205,38 +236,38 @@ func (d *Deployment) CreateRole() (rbac.Role, rbac.RoleBinding) {
 	rule := rbac.PolicyRule{
 		APIGroups: []string{""},
 		Resources: []string{"pods"},
-		Verbs: []string{"list"},
+		Verbs:     []string{"list"},
 	}
 
 	role := rbac.Role{
 		ObjectMeta: v1.ObjectMeta{
-			Name: fmt.Sprintf("%s-status", d.NamespaceName),
+			Name:      fmt.Sprintf("%s-status", d.NamespaceName),
 			Namespace: d.NamespaceName,
 		},
 		Rules: []rbac.PolicyRule{rule},
 	}
 
 	subject := rbac.Subject{
-		Kind: "ServiceAccount",
-		Name: "fc-status",
+		Kind:      "ServiceAccount",
+		Name:      "fc-status",
 		Namespace: d.NamespaceName,
 	}
 
 	roleBinding := rbac.RoleBinding{
 		ObjectMeta: v1.ObjectMeta{
-			Name: fmt.Sprintf("%s-status", d.NamespaceName),
+			Name:      fmt.Sprintf("%s-status", d.NamespaceName),
 			Namespace: d.NamespaceName,
 		},
 		Subjects: []rbac.Subject{subject},
 		RoleRef: rbac.RoleRef{
-			Kind: "Role",
-			Name: fmt.Sprintf("%s-status", d.NamespaceName),
+			Kind:     "Role",
+			Name:     fmt.Sprintf("%s-status", d.NamespaceName),
 			APIGroup: "rbac.authorization.k8s.io",
 		},
 	}
 
 	return role, roleBinding
-} 
+}
 
 func (d *Deployment) ApplyResources() error {
 	ctx := context.Background()
@@ -273,12 +304,12 @@ func (d *Deployment) ApplyResources() error {
 			return err
 		}
 	}
-	
+
 	if !serviceExists {
 		err := d.CreateProjectResources(client, ctx)
 
 		if err != nil {
-			return err 
+			return err
 		}
 
 		return nil
@@ -334,7 +365,7 @@ func (d *Deployment) CreateProjectService(client kubernetes.Clientset, ctx conte
 
 	_, deploymentCreateErr := client.AppsV1().Deployments(d.NamespaceName).Create(ctx, &deployment, v1.CreateOptions{})
 	if deploymentCreateErr != nil {
-		return deploymentCreateErr 
+		return deploymentCreateErr
 	}
 
 	_, serviceCreateErr := client.CoreV1().Services(d.NamespaceName).Create(ctx, &service, v1.CreateOptions{})
@@ -354,16 +385,26 @@ func (d *Deployment) CreateProjectResources(client kubernetes.Clientset, ctx con
 	namespace := d.CreateNamespace()
 	role, roleBinding := d.CreateRole()
 	statusDeployment := d.DeployStatus()
+	resourceQuota, err := d.CreateResourceQuota()
+
+	if err != nil {
+		return err
+	}
 
 	_, namespaceCreateErr := client.CoreV1().Namespaces().Create(ctx, &namespace, v1.CreateOptions{})
 	if namespaceCreateErr != nil {
 		return namespaceCreateErr
 	}
 
+	_, resourceQuotaCreateErr := client.CoreV1().ResourceQuotas(d.NamespaceName).Create(ctx, &resourceQuota, v1.CreateOptions{})
+	if resourceQuotaCreateErr != nil {
+		return resourceQuotaCreateErr
+	}
+
 	_, roleCreateErr := client.RbacV1().Roles(d.NamespaceName).Create(ctx, &role, v1.CreateOptions{})
 	if roleCreateErr != nil {
 		return roleCreateErr
-	} 
+	}
 
 	_, roleBindingCreateErr := client.RbacV1().RoleBindings(d.NamespaceName).Create(ctx, &roleBinding, v1.CreateOptions{})
 	if roleBindingCreateErr != nil {
@@ -375,7 +416,6 @@ func (d *Deployment) CreateProjectResources(client kubernetes.Clientset, ctx con
 		return statusCreateErr
 	}
 
-
 	return nil
 }
 
@@ -385,7 +425,12 @@ func (d *Deployment) CheckDeploymentAndService(
 	ctx context.Context,
 	client kubernetes.Clientset,
 ) (bool, error) {
-	deploymentList, err := client.AppsV1().Deployments(namespace).List(ctx, v1.ListOptions{})
+	deploymentList, deploymentListErr := client.AppsV1().Deployments(namespace).List(ctx, v1.ListOptions{})
+
+	if deploymentListErr != nil {
+		return true, deploymentListErr
+	}
+
 	serviceList, err := client.CoreV1().Services(namespace).List(ctx, v1.ListOptions{})
 
 	if err != nil {
@@ -408,11 +453,11 @@ func (d *Deployment) CheckDeploymentAndService(
 }
 
 func (d *Deployment) CheckNamespace(
-	name string, 
-	ctx context.Context, 
+	name string,
+	ctx context.Context,
 	client kubernetes.Clientset,
 ) (bool, error) {
-	list, err := client.CoreV1().Namespaces().List(ctx, v1.ListOptions{})	
+	list, err := client.CoreV1().Namespaces().List(ctx, v1.ListOptions{})
 
 	if err != nil {
 		return true, err
@@ -421,7 +466,7 @@ func (d *Deployment) CheckNamespace(
 	for _, namespace := range list.Items {
 		if namespace.Name == name {
 			return true, nil
-		} 
+		}
 	}
 
 	return false, nil

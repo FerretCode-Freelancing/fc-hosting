@@ -13,14 +13,14 @@ type ProjectResponse struct {
 	RamLimit       string `json:"ram_limit"`
 }
 
-func GetProject() (ProjectResponse, error) {
+func GetProject(projectId string) (ProjectResponse, error) {
 	client := http.Client{}
 
 	projects := fmt.Sprintf("%s:%s", os.Getenv("FC_PROJECTS_SERVICE_HOST"), os.Getenv("FC_PROJECTS_SERVICE_PORT"))
 
 	req, err := http.NewRequest(
 		"GET",
-		fmt.Sprintf("%s/get", projects),
+		fmt.Sprintf("%s/get?%s", projects, projectId),
 		nil,
 	)
 
