@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: 8ffc86d8-cc61-4103-a783-72521b74e629
+  name: fc-status
+  labels:
+    app: fc-status
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fc-status
+  template:
+    metadata:
+      labels:
+        app: fc-status
+    spec:
+      serviceAccountName: pods-list
+      containers:
+        - name: fc-status
+          image: sthanguy/fc-status
+          imagePullPolicy: Always
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+

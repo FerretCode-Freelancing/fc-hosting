@@ -18,15 +18,15 @@ import (
 )
 
 type User struct {
-	OwnerId int `json:"owner_id"`
+	OwnerId   int    `json:"owner_id"`
 	OwnerName string `json:"owner_name"`
 }
 
 type UploadRequest struct {
-	RepoUrl string `json:"repo_url"`
-	ProjectId string `json:"project_id"`
-	Ports []Port `json:"ports"`
-	Env map[string]string `json:"env"`
+	RepoUrl   string            `json:"repo_url"`
+	ProjectId string            `json:"project_id"`
+	Ports     []Port            `json:"ports"`
+	Env       map[string]string `json:"env"`
 }
 
 type DeleteRequest struct {
@@ -35,31 +35,31 @@ type DeleteRequest struct {
 
 type DeleteMessage struct {
 	ServiceName string `json:"service_name"`
-	ProjectId string `json:"project_id"`
-	Operation string `json:"operation"`
+	ProjectId   string `json:"project_id"`
+	Operation   string `json:"operation"`
 }
 
 type BuildMessage struct {
-	RepoUrl string `json:"repo_url"`
-	ProjectId string `json:"project_id"`	
-	OwnerName string `json:"owner_name"`
-	Cookie string `json:"cookie"`
-	Ports []Port `json:"ports"`
-	Env map[string]string `json:"env"`
+	RepoUrl   string            `json:"repo_url"`
+	ProjectId string            `json:"project_id"`
+	OwnerName string            `json:"owner_name"`
+	Cookie    string            `json:"cookie"`
+	Ports     []Port            `json:"ports"`
+	Env       map[string]string `json:"env"`
 }
 
 type Port struct {
-	ContainerPort int `json:"container_port"`
-	Name string `json:"name"`
+	ContainerPort int    `json:"container_port"`
+	Name          string `json:"name"`
 }
 
 func main() {
 	ctx := context.Background()
 
 	bus := events.Bus{
-		Channel: "build-pipeline",
-		ClientId: uuid.NewString(),
-		Context: ctx,
+		Channel:       "build-pipeline",
+		ClientId:      uuid.NewString(),
+		Context:       ctx,
 		TransportType: kubemq.TransportTypeGRPC,
 	}
 
@@ -161,22 +161,22 @@ func main() {
 		if err := json.Unmarshal(body, &ur); err != nil {
 			http.Error(
 				w,
-				"Failed to get the information about the repository! You might need to add the repo_url field in your JSON body.", 
+				"Failed to get the information about the repository! You might need to add the repo_url field in your JSON body.",
 				http.StatusInternalServerError,
 			)
 
 			fmt.Println(err)
 
 			return
-		} 
+		}
 
 		message := BuildMessage{
-			RepoUrl: ur.RepoUrl,
+			RepoUrl:   ur.RepoUrl,
 			OwnerName: user.OwnerName,
 			ProjectId: ur.ProjectId,
-			Cookie: cookie,
-			Ports: ur.Ports,
-			Env: ur.Env,
+			Cookie:    cookie,
+			Ports:     ur.Ports,
+			Env:       ur.Env,
 		}
 
 		fmt.Println(message)
@@ -286,5 +286,5 @@ func Authenticate(w http.ResponseWriter, r *http.Request) (User, string, bool) {
 		return User{}, "", false
 	}
 
-	return user, cookie.Value, true 
+	return user, cookie.Value, true
 }
