@@ -16,11 +16,6 @@ jobs:
       - name: Login to Docker Registry
         run: echo ${{ secrets.DOCKER_HUB_PASSWORD }} | docker login --username ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
 
-      - name: Build the Auth microservice
-        run: |
-          docker build ./services/auth --tag "sthanguy/fc-auth:$GITHUB_SHA"
-          docker push "sthanguy/fc-auth:$GITHUB_SHA"
-
       - name: Build the Subscribe microservice
         run: |
           docker build ./services/subscribe --tag "sthanguy/fc-subscribe:$GITHUB_SHA"
