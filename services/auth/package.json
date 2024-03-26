@@ -14,7 +14,7 @@
     "connect-fc-session-cache": "^1.1.8",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
-    "express": "^4.18.2",
+    "express": "^4.19.2",
     "express-session": "^1.17.3",
     "my-cat-likes-firebase": "^1.2.2"
   }
