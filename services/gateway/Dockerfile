@@ -1,4 +1,4 @@
-FROM golang:1.19-alpine
+FROM golang:1.24.2-alpine
 RUN adduser -D nonroot
 USER nonroot
 WORKDIR /usr/gateway
