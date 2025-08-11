@@ -1,4 +1,4 @@
-FROM golang:1.21.6-alpine
+FROM golang:1.25rc3-alpine
 RUN adduser -D nonroot 
 USER nonroot
 WORKDIR /home/nonroot/route
